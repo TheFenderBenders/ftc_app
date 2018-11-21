@@ -83,6 +83,7 @@ public class ConceptTensorFlowObjectDetection extends LinearOpMode {
      * {@link #tfod} is the variable we will use to store our instance of the Tensor Flow Object
      * Detection engine.
      */
+
     private TFObjectDetector tfod;
     int goldMineralXL;
     int goldMineralXR;
@@ -90,7 +91,7 @@ public class ConceptTensorFlowObjectDetection extends LinearOpMode {
     int goldMineralYT;
     int goldMineralYB;
     int GoldMineralYMid;
-
+    boolean notcorrect = true;
     boolean xValueGood = false;
     boolean yValueGood = false;
 
@@ -139,7 +140,7 @@ public class ConceptTensorFlowObjectDetection extends LinearOpMode {
                         telemetry.addData("# Object Detected", updatedRecognitions.size());
 
                         for (Recognition recognition : updatedRecognitions) {
-                            if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                            if ((recognition.getLabel().equals(LABEL_GOLD_MINERAL))&&(notcorrect)) {
                                 goldMineralXL = (int) recognition.getLeft();
                                 goldMineralXR = (int) recognition.getRight();
                                 int goldMineralYT = (int) recognition.getTop();
@@ -165,23 +166,30 @@ public class ConceptTensorFlowObjectDetection extends LinearOpMode {
                                     }
 
                                     if (yValueGood) {
-                                        if (GoldMineralXMid > 700) {
+                                       if (GoldMineralXMid > 700) {
                                             xValueGood = false;
-                                            leftDrive.setPower(-0.5);
-                                            rightDrive.setPower(0.5);
+                                            leftDrive.setPower(-0.3);
+                                            rightDrive.setPower(0.3);
 
-                                        } else if (GoldMineralXMid < 600) {
+                                        } else if (GoldMineralXMid < 72000) {
                                             xValueGood = false;
-                                            leftDrive.setPower(0.5);
-                                            rightDrive.setPower(-0.5);
+                                            leftDrive.setPower(0.3);
+                                            rightDrive.setPower(-0.3);
                                         } else {
                                             xValueGood = true;
                                             leftDrive.setPower(0.0);
                                             rightDrive.setPower(0.0);
                                             telemetry.addData("GoodX", " ");
+                                            notcorrect = false;
                                         }
+
                                     }
+                             if((yValueGood)&&(xValueGood)){
+                                        leftDrive.setPower(1.0);
+                                leftDrive.setPower(1.0);
                             }
+                            }
+
 
 
                         }
