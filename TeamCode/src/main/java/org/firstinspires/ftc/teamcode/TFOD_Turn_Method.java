@@ -30,16 +30,11 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
@@ -61,8 +56,8 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="LM3_Autonomous", group="Linear Opmode")
-public class LM3_Autonomous extends LinearOpMode {
+
+public class TFOD_Turn_Method extends LinearOpMode {
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
     private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
@@ -102,6 +97,7 @@ public class LM3_Autonomous extends LinearOpMode {
     boolean notcorrect = true;
     boolean xValueGood = false;
     boolean yValueGood = false;
+    boolean sampled = false;
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -117,19 +113,12 @@ public class LM3_Autonomous extends LinearOpMode {
     final int INDEPOT = 6;
     final int CLAIMED = 7;
     final int TOWARDCRATER = 8;
-    final int BACKUP= 9;
-    final int SAMPLE = 10;
-    final int DONE = 11;
-    final int FINALSAMPLE = 12;
-    final int unlatch = 13;
-    final int turn = 14;
+    final int SAMPLE = 9;
+    final int DONE = 10;
     boolean inCrater = false;
-    boolean turned = false;
-    boolean backed = false;
-    int state;
     boolean foundGold = false;
-    boolean timed = false;
-    long TimeSample;
+
+    int state;
     int x;
 
     @Override
@@ -163,6 +152,8 @@ public class LM3_Autonomous extends LinearOpMode {
         /** Activate Tensor Flow Object Detection. */
         if (tfod != null) {
             tfod.activate();
+        } else {
+            // throw an exception
         }
 
         // Wait for the game to start (driver presses PLAY)
@@ -172,200 +163,27 @@ public class LM3_Autonomous extends LinearOpMode {
         telemetry.addData("Starting", "program");
         telemetry.update();
 
-        state = HANGING;
-
         // Setup a variable for each drive wheel to save power level for telemetry
-        double leftPower;
-        double rightPower;
+        double leftPower = 0.0;
+        double rightPower = 0.0;
         boolean tfodInitialized = false;
         long tStart = System.currentTimeMillis();
+        boolean foundGold = false;
 
         while (opModeIsActive()) {
-            if (tfod != null) {
-                switch (state) {
-                    case HANGING:
-                        if (System.currentTimeMillis() - tStart < 8700) {
-                            liftDrive.setPower(1.0);
-                        } else {
-                            liftDrive.setPower(0.0);
-                            state = ONTHEGROUND;
-                            tStart = System.currentTimeMillis();
-                        }
-                        break;
 
-                    case ONTHEGROUND:
-                        if (System.currentTimeMillis() - tStart < 350) {
-                            leftDrive.setPower(-0.65);
-                            rightDrive.setPower(0.65);
-                        } else {
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            state = unlatch;
-                            tStart = System.currentTimeMillis();
-                        }
-                        break;
-
-                    case unlatch:
-                        if (System.currentTimeMillis() - tStart < 150) {
-                            leftDrive.setPower(0.4);
-                            rightDrive.setPower(0.4);
-
-                            // EDIT SPEEDS TO MAKE VUFORIA AND TFOD STAY IN TIME
-                        } else {
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            state = SAMPLE;
-                            tStart = System.currentTimeMillis();
-                            TimeSample = System.currentTimeMillis();
-                            Thread.sleep (10000);
-                        }
-
-                        /*
-                        iftime is less that 0.75 seconds, first is gold
-                         */
-                        break;
-
-
-                    case SAMPLE:
-                        List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
-                        if (updatedRecognitions != null) {
-                            telemetry.addData("# Objects Detected", updatedRecognitions.size());
-                            if (updatedRecognitions.size() > 0) {
-                                for (Recognition recognition : updatedRecognitions) {
-                                    if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
-                                        foundGold = true;
-                                        telemetry.addData("Found Gold at ", recognition.getLeft());
-                                        telemetry.update();
-
-                                        System.exit(0);
-
-                                        final long pos = System.currentTimeMillis()-TimeSample;
-                                        if(pos<900){
-                                            telemetry.addLine("left");
-                                        }
-                                        else if((pos>1400)&&(pos<2400)){
-                                            telemetry.addLine("Mid");
-                                        }
-                                        else if(pos>3000){
-                                            telemetry.addLine("Right");
-                                        }
-
-                                       // state = turn;
-                                        // add this back
-
-                                        /*
-                                        if TimeSample is less that
-                                        if Time  sample is <>
-                                        if TimeSample is greater than
-                                         */
-                                    }
-                                }
-                            }
-
-                            if (!foundGold) { // gold not found. Turn to the right
-
-                                    leftPower = 0.4;
-                                rightPower = -0.4;
-                                leftDrive.setPower(leftPower);
-                                rightDrive.setPower(rightPower);
-                                telemetry.addLine("SHOULD NOT BE HERE!");
-                                telemetry.update();
-                            } else {
-                                leftPower = 0.0;
-                                rightPower = 0.0;
-                                leftDrive.setPower(leftPower);
-                                rightDrive.setPower(rightPower);
-                                tStart = System.currentTimeMillis();
-                            }
-                            Thread.sleep(100);
-
-
-
-                                /*
-                                if (updatedRecognitions.size() == 3) {
-                                    int goldMineralX = -1;
-                                    int silverMineral1X = -1;
-                                    int silverMineral2X = -1;
-                                    for (Recognition recognition : updatedRecognitions) {
-                                        if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
-                                            goldMineralX = (int) recognition.getLeft();
-                                        } else if (silverMineral1X == -1) {
-                                            silverMineral1X = (int) recognition.getLeft();
-                                        } else {
-                                            silverMineral2X = (int) recognition.getLeft();
-                                        }
-                                    }
-                                    if (goldMineralX != -1 && silverMineral1X != -1 && silverMineral2X != -1) {
-                                        if (goldMineralX < silverMineral1X && goldMineralX < silverMineral2X) {
-                                            telemetry.addData("Gold Mineral Position", "Left");
-                                            x = 1;
-                                        } else if (goldMineralX > silverMineral1X && goldMineralX > silverMineral2X) {
-                                            telemetry.addData("Gold Mineral Position", "Right");
-                                            x = 0;
-                                        } else {
-                                            telemetry.addData("Gold Mineral Position", "Center");
-                                            x = -1;
-                                        }
-                                    }
-                                }
-                                */
-                                tStart = System.currentTimeMillis();
-                        telemetry.update();
-                }
-                break;
-
-                    case turn:
-                        if(System.currentTimeMillis()-tStart<250){
-                            leftDrive.setPower(-0.4);
-                            rightDrive.setPower(0.4);
-                        }
-                        else{
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            state = FINALSAMPLE;
-                        }
-                        break;
-
-
-
-
-                    case FINALSAMPLE:
-                        tStart = System.currentTimeMillis();
-                        if((System.currentTimeMillis()-tStart<2000)&&(!backed)){
-                            leftDrive.setPower(0.3);
-                            rightDrive.setPower(0.3);
-                        }
-                        else{
-
-
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            backed = true;
-                            state = DONE;
-
-                        }
-                        break;
-                case DONE:
-                    leftDrive.setPower(0.0);
-                    rightDrive.setPower(0.0);
-                    break;
-            }
-
-
+            telemetry.addData("Status", "Run Time: " + runtime.toString());
+            telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
+            telemetry.update();
         }
+
+        if (tfod != null) {
+            tfod.shutdown();
+        }
+
+
     }
-
-            if(tfod !=null)
-
-    {
-        tfod.shutdown();
-    }
-
-}
-
-
-
-
+// where method goes
 
     /**
      * Initialize the Vuforia localization engine.
@@ -395,10 +213,7 @@ public class LM3_Autonomous extends LinearOpMode {
         tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
         tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL, LABEL_SILVER_MINERAL);
     }
-
-
 }
-
 
 
 
