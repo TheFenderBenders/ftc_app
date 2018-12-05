@@ -93,15 +93,7 @@ public class LM3_Autonomous extends LinearOpMode {
      */
 
     private TFObjectDetector tfod;
-    int goldMineralXL;
-    int goldMineralXR;
-    int GoldMineralXMid;
-    int goldMineralYT;
-    int goldMineralYB;
-    int GoldMineralYMid;
-    boolean notcorrect = true;
-    boolean xValueGood = false;
-    boolean yValueGood = false;
+
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -113,8 +105,10 @@ public class LM3_Autonomous extends LinearOpMode {
     final int UNLATCH = 2;
     final int BACKUP = 3;
     final int SAMPLE = 4;
+    final int PUSH_AND_CLAIM = 5;
     final int DONE = 100;
-    
+    final int TEST = 101;
+
     final int FINALSAMPLE = 12;
     final int turn = 14;
     boolean inCrater = false;
@@ -124,8 +118,7 @@ public class LM3_Autonomous extends LinearOpMode {
     boolean foundGold = false;
     boolean timed = false;
     long TimeSample;
-    int x;
-
+    int positionOfGold;// 0 = Gold is Left      1 = Gold is in the middle     2 = Gold is right
     @Override
     public void runOpMode() throws InterruptedException {
         telemetry.addData("Status", "Initialized");
@@ -164,7 +157,7 @@ public class LM3_Autonomous extends LinearOpMode {
         runtime.reset();
 
         // start off hanging
-        state = HANGING;
+        state = UNLATCH;
 
         // Setup a variable for each drive wheel to save power level for telemetry
         double leftPower;
@@ -175,7 +168,21 @@ public class LM3_Autonomous extends LinearOpMode {
         while (opModeIsActive()) {
             if (tfod != null) {
                 switch (state) {
-                    case HANGING:
+                    case TEST:
+                        telemetry.addLine("in TEST");
+                        telemetry.update();
+                        if (System.currentTimeMillis() - tStart < 1000) {
+                            leftDrive.setPower(0.3);
+                            rightDrive.setPower(0.3);
+                        }
+                        else {
+                            leftDrive.setPower(0.0);
+                            rightDrive.setPower(0.0);
+                            state = DONE;
+                        }
+                        break;
+
+                        case HANGING:
                         if (System.currentTimeMillis() - tStart < 8700) {
                             liftDrive.setPower(1.0);
                         } else {
@@ -185,32 +192,36 @@ public class LM3_Autonomous extends LinearOpMode {
                         }
                         break;
 
-                    case UNLATCH:
-                        if (System.currentTimeMillis() - tStart < 350) {
-                            leftDrive.setPower(-0.65);
-                            rightDrive.setPower(0.65);
+                        case UNLATCH:
+                        if (System.currentTimeMillis() - tStart < 500) { // was 350
+                            leftDrive.setPower(-0.5);
+                            rightDrive.setPower(0.5);
                         } else {
                             leftDrive.setPower(0.0);
                             rightDrive.setPower(0.0);
+                            Thread.sleep(500);
                             state = BACKUP;
                             tStart = System.currentTimeMillis();
                         }
                         break;
 
-                    case BACKUP:
+                        case BACKUP:
                         if (System.currentTimeMillis() - tStart < 150) {
-                            leftDrive.setPower(0.4);
-                            rightDrive.setPower(0.4);
+                            leftDrive.setPower(-0.4);
+                            rightDrive.setPower(-0.4);
                         } else {
                             leftDrive.setPower(0.0);
                             rightDrive.setPower(0.0);
                             state = SAMPLE;
+//                            telemetry.addLine("sleeping for 5 seconds");
+//                            telemetry.update();
+//                            Thread.sleep(5000);
                             tStart = System.currentTimeMillis();
                             TimeSample = tStart;
                         }
                         break;
 
-                    case SAMPLE:
+                        case SAMPLE:
                         List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
                         if (updatedRecognitions != null) {
                             if (updatedRecognitions.size() > 0) {
@@ -234,13 +245,21 @@ public class LM3_Autonomous extends LinearOpMode {
                                         
                                         if(pos<900){
                                             telemetry.addLine("Gold | Silver | Silver");
+                                            positionOfGold = 0;
+                                            state = PUSH_AND_CLAIM;
                                         }
                                         else if((pos>1400)&&(pos<2400)){
                                             telemetry.addLine("Silver | Gold | Silver");
+
+                                            positionOfGold = 1;
+                                            state = PUSH_AND_CLAIM;
                                         }
                                         else if(pos>3000){
                                             telemetry.addLine("Silver | Silver | Gold");
+                                            positionOfGold = 2;
+                                            state = PUSH_AND_CLAIM;
                                         }
+                                        tStart = System.currentTimeMillis();
                                     }
                                 }
                             }
@@ -260,14 +279,36 @@ public class LM3_Autonomous extends LinearOpMode {
                             }
 */
                             Thread.sleep(100);
-                            // need to move to next state!
-                            tStart = System.currentTimeMillis();
                             telemetry.update();
-                }
-                break;
+                        }
+                        break;
 
-                    case turn:
-                        if(System.currentTimeMillis()-tStart<250){
+                        case PUSH_AND_CLAIM:
+                        if(positionOfGold == 0){
+                            state = DONE;
+                            //left
+                        }
+                        else if(positionOfGold == 1){
+                            //middle. Go fwd to depot
+                            if (System.currentTimeMillis() - tStart < 2000) {
+                                leftPower = -0.5;
+                                rightPower = -0.5;
+                                leftDrive.setPower(leftPower);
+                                rightDrive.setPower(rightPower);
+                            }
+                            else {
+                                state = DONE;
+                            }
+
+                        }
+                        else if (positionOfGold == 2){
+                            //right
+                            state = DONE;
+                        }
+                        break;
+
+                        case turn:
+                        if(System.currentTimeMillis()-tStart<200){
                             leftDrive.setPower(-0.4);
                             rightDrive.setPower(0.4);
                         }
@@ -278,10 +319,7 @@ public class LM3_Autonomous extends LinearOpMode {
                         }
                         break;
 
-
-
-
-                    case FINALSAMPLE:
+                        case FINALSAMPLE:
                         tStart = System.currentTimeMillis();
                         if((System.currentTimeMillis()-tStart<2000)&&(!backed)){
                             leftDrive.setPower(0.3);
@@ -297,25 +335,20 @@ public class LM3_Autonomous extends LinearOpMode {
 
                         }
                         break;
-                case DONE:
-                    leftDrive.setPower(0.0);
-                    rightDrive.setPower(0.0);
-                    break;
-            }
 
-
+                        case DONE:
+                            leftDrive.setPower(0.0);
+                            rightDrive.setPower(0.0);
+                            break;
+                    }
         }
     }
 
-            if(tfod !=null)
-
+    if(tfod !=null)
     {
         tfod.shutdown();
     }
-
 }
-
-
 
     /**
      * Initialize the Vuforia localization engine.
