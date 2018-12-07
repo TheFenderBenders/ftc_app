@@ -93,7 +93,7 @@ public class CRServoTest extends LinearOpMode {
             telemetry.update();
 //            position = servo.getPosition();
 //            servo.setPosition(position+0.1);
-            servo.setPower(0.8);
+            servo.setPower(0.79);
             sleep(CYCLE_MS);
             idle();
         }

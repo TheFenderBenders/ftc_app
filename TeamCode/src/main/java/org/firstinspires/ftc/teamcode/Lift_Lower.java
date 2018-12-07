@@ -124,31 +124,27 @@ public class Lift_Lower extends LinearOpMode {
         rightDrive.setDirection(DcMotor.Direction.FORWARD);
         liftDrive.setDirection(DcMotor.Direction.FORWARD);
 
+        long tStart = System.currentTimeMillis();
+        double leftPower;
+        double rightPower;
+        if (!timed) tStart = System.currentTimeMillis();
+        if (tStart - System.currentTimeMillis() < 8700) {
+            liftDrive.setPower(-1.0);
+        } else {
+            liftDrive.setPower(0.0);
+            timed= true;
+        }
+
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
 
         if (opModeIsActive()) {
-            /** Activate Tensor Flow Object Detection. */
-
-
-            // The TFObjectDetector uses the camera frames from the VuforiaLocalizer, so we create that
-
-
-            long tStart = System.currentTimeMillis();
 
             // run until the end of the match (driver presses STOP)
             while (opModeIsActive()) {
                 // Setup a variable for each drive wheel to save power level for telemetry
-                double leftPower;
-                double rightPower;
-                if (!timed) tStart = System.currentTimeMillis();
-                if (tStart - System.currentTimeMillis() < 8700) {
-                    liftDrive.setPower(-1.0);
-                } else {
-                    liftDrive.setPower(0.0);
-                    timed= true;
-                }
+
                 idle();
                 // Show the elapsed game time and wheel power.
                 telemetry.addData("Status", "Run Time: " + runtime.toString());
