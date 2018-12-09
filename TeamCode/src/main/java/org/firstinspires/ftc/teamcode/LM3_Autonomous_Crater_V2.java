@@ -29,21 +29,13 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import android.text.method.MovementMethod;
-
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
 import com.vuforia.Vec2F;
-import com.vuforia.Vuforia;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
@@ -65,8 +57,8 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="LM3_Autonomous", group="Linear Opmode")
-public class LM3_Autonomous extends LinearOpMode {
+@Autonomous(name="LM3_Autonomous_Crater_V2", group="Linear Opmode")
+public class LM3_Autonomous_Crater_V2 extends LinearOpMode {
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
     private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
@@ -114,11 +106,14 @@ public class LM3_Autonomous extends LinearOpMode {
     final int TURNLEFTTODEPOT = 7;
     final int ENDINDEPOT = 8;
     final int SLEEP = 9;
+    final int TURNLEFTALITTLETODEPOT = 10;
+    final int TURNRIGHTALITTLETODEPOT = 11;
+    final int POSONE = 13;
     final int DONE = 100;
     final int TEST = 101;
-
     final int FINALSAMPLE = 12;
     final int turn = 14;
+    final int REVERSEJERK = 15;
     boolean inCrater = false;
     boolean turned = false;
     boolean backed = false;
@@ -130,6 +125,7 @@ public class LM3_Autonomous extends LinearOpMode {
     long TimeSample;
     int positionOfGold;// 0 = Gold is Left      1 = Gold is in the middle     2 = Gold is right
     long pos;
+
     @Override
     public void runOpMode() throws InterruptedException {
         telemetry.addData("Status", "Initialized");
@@ -204,7 +200,7 @@ public class LM3_Autonomous extends LinearOpMode {
                         }
                         break;
                         case UNLATCH:
-                            moveByTime(-0.5, 0.5, 500, SLEEP);
+                            moveByTime(-0.5, 0.5, 475, SLEEP);
                         break;
                     case SLEEP:
                         Thread.sleep(1000);
@@ -223,37 +219,15 @@ public class LM3_Autonomous extends LinearOpMode {
                                 telemetry.addData("# Objects Detected", updatedRecognitions.size());
                                 telemetry.update();
                                 for (Recognition recognition : updatedRecognitions) {
-                                    if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                                    if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)&&(recognition.getTop()>250)) {
                                         foundGold = true;
-                                        
+                                        moveByTime(-0.75,-0.75,1000, DONE);
                                         // gold found; turn power off right away
-                                        leftPower = 0.0;
-                                        rightPower = 0.0;
-                                        leftDrive.setPower(leftPower);
-                                        rightDrive.setPower(rightPower);
 
                                         telemetry.addData("Found Gold at ", recognition.getLeft());
                                         telemetry.update();
 
-                                        pos = System.currentTimeMillis()-TimeSample;
-                                        if(pos<1000){//900
-                                            telemetry.addLine("Gold | Silver | Silver");
-                                            positionOfGold = 0;
-                                            state = PUSH_AND_CLAIM;
-                                        }
-                                        else if((pos>1000)&&(pos<5000)){//1400      2400
-                                            telemetry.addLine("Silver | Gold | Silver");
-                                            positionOfGold = 1;
-                                            state = PUSH_AND_CLAIM;
-                                        }
-                                        else if(pos>5000){// 3000
-                                            telemetry.addLine("Silver | Silver | Gold");
-                                            positionOfGold = 2;
-                                            state = PUSH_AND_CLAIM;
-                                        }
-                                        telemetry.addData("pos:",(pos) );
-                                        telemetry.update();
-                                        tStart = System.currentTimeMillis();
+
                                     }
                                 }
                             }
@@ -266,8 +240,8 @@ public class LM3_Autonomous extends LinearOpMode {
                                 leftDrive.setPower(leftPower);
                                 rightDrive.setPower(rightPower);
                                 Thread.sleep(50);//50
-                                leftDrive.setPower(0.3);
-                                rightDrive.setPower(-0.3);
+                                leftDrive.setPower(0.0);
+                                rightDrive.setPower(0.0);
                                 Thread.sleep(50);
                             } 
 /*                            else {
@@ -283,55 +257,12 @@ public class LM3_Autonomous extends LinearOpMode {
                         }
                         break;
 
-                        case PUSH_AND_CLAIM:
-                        if(positionOfGold == 0){
-                            // push to depot
-                            moveByTime(-0.4, -0.4, 1300, TURNRIGHTTODEPOT);
-
-                        }
-                        else if(positionOfGold == 1){
-                            //middle. Go fwd to depot
-                            moveByTime(-0.4, -0.4, 1500, TURNLEFTTODEPOT);
-
-                        }
-                        else if (positionOfGold == 2){
-                            // push to depot
-                            moveByTime(-0.4, -0.4, 1300, TURNLEFTTODEPOT);
-                        }
-                        break;
-
-                        case TURNRIGHTTODEPOT:
-                            moveByTime(0.4, -0.4, 1750, ENDINDEPOT);
-                        break;
-
-                        case TURNLEFTTODEPOT:
-                            moveByTime(-0.4, 0.4, 1750, ENDINDEPOT);
-                            break;
-
-                        case ENDINDEPOT:
-                            // move forward
-                            moveByTime(-0.4, -0.4, 1200, DONE);
-                            break;
-
-                        case FINALSAMPLE:
-                        tStart = System.currentTimeMillis();
-                        if((System.currentTimeMillis()-tStart<2000)&&(!backed)){
-                            leftDrive.setPower(0.3);
-                            rightDrive.setPower(0.3);
-                        }
-                        else{
+                                              case DONE:
                             leftDrive.setPower(0.0);
                             rightDrive.setPower(0.0);
-                            backed = true;
-                            state = DONE;
-
-                        }
-                        break;
-
-                        case DONE:
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            telemetry.addData("pos:",(pos) );
+                            telemetry.addData("pos:",pos);
+                            telemetry.update();
+                            telemetry.addData("positionOfGold", positionOfGold);
                             telemetry.update();
                             break;
 
@@ -346,7 +277,6 @@ public class LM3_Autonomous extends LinearOpMode {
 }
 
     private void moveByTime (double leftP, double rightP, int time, int nextState) {
-        telemetry.addData("moveByTime", time);
         if (!timeReset) {
             timeReset = true;
             tStart = System.currentTimeMillis();
@@ -400,8 +330,8 @@ public class LM3_Autonomous extends LinearOpMode {
                 "tfodMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         TFObjectDetector.Parameters tfodParameters = new TFObjectDetector.Parameters(tfodMonitorViewId);
         tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
-//        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL, LABEL_SILVER_MINERAL);
-        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL);
+          tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL, LABEL_SILVER_MINERAL);
+//        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL);
     }
 
 
