@@ -30,82 +30,22 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
 TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-
-/**
- * {@link SensorREV2mDistance} illustrates how to use the REV Robotics
- * Time-of-Flight Range Sensor.
- *
- * The op mode assumes that the range sensor is configured with a name of "sensor_range".
- *
- * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
- * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
- *
- * @see <a href="http://revrobotics.com">REV Robotics Web Page</a>
- */
-@TeleOp(name = "Sensor: REV2mDistance", group = "Sensor")
-@Disabled
-public class SensorREV2mDistance extends LinearOpMode {
-
-    private DistanceSensor sensorRange;
-
-    @Override
-    public void runOpMode() {
-        // you can use this as a regular DistanceSensor.
-        sensorRange = hardwareMap.get(DistanceSensor.class, "sensor_range");
-
-        // you can also cast this to a Rev2mDistanceSensor if you want to use added
-        // methods associated with the Rev2mDistanceSensor class.
-        Rev2mDistanceSensor sensorTimeOfFlight = (Rev2mDistanceSensor)sensorRange;
-
-        telemetry.addData(">>", "Press start to continue");
-        telemetry.update();
-
-        waitForStart();
-        while(opModeIsActive()) {
-            // generic DistanceSensor methods.
-            telemetry.addData("deviceName",sensorRange.getDeviceName() );
-            telemetry.addData("range", String.format("%.01f mm", sensorRange.getDistance(DistanceUnit.MM)));
-            telemetry.addData("range", String.format("%.01f cm", sensorRange.getDistance(DistanceUnit.CM)));
-            telemetry.addData("range", String.format("%.01f m", sensorRange.getDistance(DistanceUnit.METER)));
-            telemetry.addData("range", String.format("%.01f in", sensorRange.getDistance(DistanceUnit.INCH)));
-
-            // Rev2mDistanceSensor specific methods.
-            telemetry.addData("ID", String.format("%x", sensorTimeOfFlight.getModelID()));
-            telemetry.addData("did time out", Boolean.toString(sensorTimeOfFlight.didTimeoutOccur()));
-
-            telemetry.update();
-        }
-    }
-
-    /**
-     * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
-     * the autonomous or the teleop period of an FTC match. The names of OpModes appear on the menu
-     * of the FTC Driver Station. When an selection is made from the menu, the corresponding OpMode
-     * class is instantiated on the Robot Controller and executed.
-     *
-     * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
-     * It includes all the skeletal structure that all linear OpModes contain.
-     *
-     * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
-     * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
-     */
 
     @TeleOp(name="LM3 Teleop DONOTDELETE", group="Linear Opmode")
-    @Disabled
-    public static class LM3_Teleop extends LinearOpMode {
+    public class TestTeleOp extends LinearOpMode {
 
         // Declare OpMode members.
         private ElapsedTime runtime = new ElapsedTime();
@@ -201,6 +141,12 @@ public class SensorREV2mDistance extends LinearOpMode {
                 else {
                     linearslide = 0.0;
                 }
+                if(gamepad2.a){
+                    linearslide = (0.79);
+                }
+                else{
+                    linearslide  = 0.0;
+                }
 
                 if(gamepad2.right_stick_y!=0.0){
                  arm = gamepad2.right_stick_y;
@@ -210,26 +156,36 @@ public class SensorREV2mDistance extends LinearOpMode {
                 }
 
                 if(gamepad1.left_trigger>0.0){
-                    collector = (0.79*gamepad2.left_trigger);
+               CRServoTurn(50,1.0,collectorDrive);
                 }
-                else if(gamepad1.right_trigger<0.0) {
-                    collector = (-0.79 * gamepad2.right_trigger);
+                else if(gamepad1.right_trigger>0.0) {
+                    CRServoTurn(50,-1.0,collectorDrive);
                 }
                 else {
-                    collector = 0.0;
+                    collectorDrive.setPower(0.0);
                 }
+
 
                 armDrive.setPower(arm);
                 linearDrive.setPower(linearslide);
-                collectorDrive.setPower(collector);
-
 
                 telemetry.addData("Status", "Run Time: " + runtime.toString());
                 telemetry.addData("Motors", "left-drive (%.2f), right-drive(%.2f)", leftPower, rightPower);
                 telemetry.addData("linearSlide", linearslide);
-                telemetry.addData("collector", collector);
+                telemetry.addData("collector", 0.79);
                 telemetry.update();
             }
+
         }
-    }
-}
+        public void CRServoTurn(long sleepTime, double speed, CRServo servo){
+
+                servo.setPower(speed * 0.79);
+                sleep(sleepTime);
+                idle();
+            }
+
+            }
+
+
+
+

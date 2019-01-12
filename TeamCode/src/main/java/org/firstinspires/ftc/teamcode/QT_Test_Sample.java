@@ -36,6 +36,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.vuforia.Vec2F;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
@@ -57,8 +58,8 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="LM3_Autonomous_Crater_V2", group="Linear Opmode")
-public class LM3_Autonomous_Crater_V2 extends LinearOpMode {
+@Autonomous(name="QT_Test_Sample", group="Linear Opmode")
+public class QT_Test_Sample extends LinearOpMode {
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
     private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
@@ -96,35 +97,16 @@ public class LM3_Autonomous_Crater_V2 extends LinearOpMode {
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
     private DcMotor liftDrive = null;
+    int goldpos;
+    float goldPosition;
+    float silverPosition;
+    boolean goldFound = false;
+    boolean silverFound = false;
+    boolean nullOnce = false;
+    int goldMineralX;
+    int silverMineral1X;
+    int silverMineral2X;
 
-    final int HANGING = 1;
-    final int UNLATCH = 2;
-    final int BACKUP = 3;
-    final int SAMPLE = 4;
-    final int PUSH_AND_CLAIM = 5;
-    final int TURNRIGHTTODEPOT = 6;
-    final int TURNLEFTTODEPOT = 7;
-    final int ENDINDEPOT = 8;
-    final int SLEEP = 9;
-    final int TURNLEFTALITTLETODEPOT = 10;
-    final int TURNRIGHTALITTLETODEPOT = 11;
-    final int POSONE = 13;
-    final int DONE = 100;
-    final int TEST = 101;
-    final int FINALSAMPLE = 12;
-    final int turn = 14;
-    final int REVERSEJERK = 15;
-    boolean inCrater = false;
-    boolean turned = false;
-    boolean backed = false;
-    boolean unlatchSleep = false;
-    long tStart;
-    int state;
-    boolean timeReset = false;
-    boolean foundGold = false;
-    long TimeSample;
-    int positionOfGold;// 0 = Gold is Left      1 = Gold is in the middle     2 = Gold is right
-    long pos;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -165,86 +147,62 @@ public class LM3_Autonomous_Crater_V2 extends LinearOpMode {
         runtime.reset();
 
         // start off hanging
-        tStart = System.currentTimeMillis();
-        state = HANGING;
+
 
         // Setup a variable for each drive wheel to save power level for telemetry
         double leftPower;
         double rightPower;
         boolean tfodInitialized = false;
 
+        int left = 0;
+
         while (opModeIsActive()) {
             if (tfod != null) {
-                switch (state) {
-                    case TEST:
-                        telemetry.addLine("in TEST");
-                        telemetry.update();
-                        if (System.currentTimeMillis() - tStart < 5000) {
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(-0.5);
-                        }
-                        else {
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            state = DONE;
-                        }
-                        break;
-
-                        case HANGING:
-                        if (System.currentTimeMillis() - tStart < 8700) {
-                            liftDrive.setPower(1.0);
-                        } else {
-                            liftDrive.setPower(0.0);
-                            state = UNLATCH;
-                            tStart = System.currentTimeMillis();
-                        }
-                        break;
-                        case UNLATCH:
-                            moveByTime(-0.5, 0.5, 475, SLEEP);
-                        break;
-                    case SLEEP:
-                        Thread.sleep(1000);
-                        state = BACKUP;
-                        break;
-
-                        case BACKUP:
-                            moveByTime(-0.4, -0.4, 150, SAMPLE);
-                            TimeSample = System.currentTimeMillis();
-                        break;
-
-                        case SAMPLE:
                         List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
                         if (updatedRecognitions != null) {
                             if (updatedRecognitions.size() > 0) {
+                                goldMineralX = -1;
+                                silverMineral1X = -1;
+                                silverMineral2X = -1;
+
                                 telemetry.addData("# Objects Detected", updatedRecognitions.size());
                                 telemetry.update();
+
                                 for (Recognition recognition : updatedRecognitions) {
-                                    if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)&&(recognition.getTop()>250)) {
-                                        foundGold = true;
-                                        moveByTime(-0.75,-0.75,1000, DONE);
-                                        // gold found; turn power off right away
-
-                                        telemetry.addData("Found Gold at ", recognition.getLeft());
-                                        telemetry.update();
-
-
+                                    left = (int) recognition.getLeft();
+                                    if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                                        goldMineralX = (int) recognition.getLeft();
+                                    } else if (silverMineral1X == -1) {
+                                        silverMineral1X = (int) recognition.getLeft();
+                                    } else {
+                                        silverMineral2X = (int) recognition.getLeft();
                                     }
                                 }
+                                if(silverMineral2X == -1){
+                                    if(goldMineralX>silverMineral1X){
+                                        telemetry.addLine("mid");
+                                    }
+                                    else{
+                                        telemetry.addLine("left");
+                                    }
+                                }
+                                else{
+                                    telemetry.addLine("right");
+                                }
+
+                                /*if (goldMineralX != -1 && silverMineral1X != -1 && silverMineral2X != -1) {
+                                    if (goldMineralX < silverMineral1X && goldMineralX < silverMineral2X) {
+                                        telemetry.addData("Gold Mineral Position", "Left");
+                                    } else if (goldMineralX > silverMineral1X && goldMineralX > silverMineral2X) {
+                                        tele[metry.addData("Gold Mineral Position", "Right");
+                                    } else {
+                                        telemetry.addData("Gold Mineral Position", "Center");
+                                    }
+                                }*/
+
                             }
 
-                            if (!foundGold) { // gold not found. Turn to the right
-                                telemetry.addLine("still not found gold...turning");
-                                telemetry.update();
-                                leftPower = 0.5;
-                                rightPower = -0.5;
-                                leftDrive.setPower(leftPower);
-                                rightDrive.setPower(rightPower);
-                                Thread.sleep(50);//50
-                                leftDrive.setPower(0.0);
 
-                                rightDrive.setPower(0.0);
-                                Thread.sleep(50);
-                            } 
 /*                            else {
                                 leftPower = 0.0;
                                 rightPower = 0.0;
@@ -253,23 +211,20 @@ public class LM3_Autonomous_Crater_V2 extends LinearOpMode {
                                 tStart = System.currentTimeMillis();
                             }
 */
-                            Thread.sleep(100);
-                            telemetry.update();
-                        }
-                        break;
 
-                                              case DONE:
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            telemetry.addData("pos:",pos);
+                            Thread.sleep(100);
+                           telemetry.addData("goldposis", goldpos);
                             telemetry.update();
-                            telemetry.addData("positionOfGold", positionOfGold);
-                            telemetry.update();
-                            break;
+
+                        }
+
+
+
+
 
                     }
         }
-    }
+
 
     if(tfod !=null)
     {
@@ -277,28 +232,7 @@ public class LM3_Autonomous_Crater_V2 extends LinearOpMode {
     }
 }
 
-    private void moveByTime (double leftP, double rightP, int time, int nextState) {
-        if (!timeReset) {
-            timeReset = true;
-            tStart = System.currentTimeMillis();
-            telemetry.addData("first time", runtime.toString());
-            telemetry.update();
-        }
-        else {
-            telemetry.addData("here", runtime.toString());
-            telemetry.update();
-            if(System.currentTimeMillis()-tStart < time){
-                leftDrive.setPower(leftP);
-                rightDrive.setPower(rightP);
-            }
-            else {
-                leftDrive.setPower(0.0);
-                rightDrive.setPower(0.0);
-                timeReset = false;
-                state = nextState;
-            }
-        }
-    }
+
 
     /**
      * Initialize the Vuforia localization engine.
