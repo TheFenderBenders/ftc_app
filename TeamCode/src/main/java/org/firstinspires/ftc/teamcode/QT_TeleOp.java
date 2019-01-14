@@ -70,7 +70,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
      * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
      */
 
-    @TeleOp(name="QT Teleop", group="Linear Opmode")
+    @TeleOp(name="QT Teleop Test", group="Linear Opmode")
     public  class QT_TeleOp extends LinearOpMode {
 
         // Declare OpMode members.
@@ -179,10 +179,10 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
                     arm = 0.0;
                 }
                 if(gamepad1.left_trigger>0.0){
-                    collector = (0.79*gamepad2.left_trigger);
+                    collector = (0.79*gamepad1.left_trigger);
                 }
                 else if(gamepad1.right_trigger<0.0) {
-                    collector = (-0.79 * gamepad2.right_trigger);
+                    collector = (-0.79 * gamepad1.right_trigger);
                 }
                 else {
                     collector = 0.0;

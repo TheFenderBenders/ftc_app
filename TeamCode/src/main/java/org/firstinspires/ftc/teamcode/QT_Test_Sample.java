@@ -181,13 +181,16 @@ public class QT_Test_Sample extends LinearOpMode {
                                 if(silverMineral2X == -1){
                                     if(goldMineralX>silverMineral1X){
                                         telemetry.addLine("mid");
+                                        telemetry.update();
                                     }
                                     else{
                                         telemetry.addLine("left");
+                                        telemetry.update();
                                     }
                                 }
                                 else{
                                     telemetry.addLine("right");
+                                    telemetry.update();
                                 }
 
                                 /*if (goldMineralX != -1 && silverMineral1X != -1 && silverMineral2X != -1) {
