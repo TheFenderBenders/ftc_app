@@ -51,6 +51,7 @@ import com.qualcomm.robotcore.util.Range;
  */
 
 @TeleOp(name="Encoder Test", group="Linear Opmode")
+@Disabled
 public class Neverest_encoder_test extends LinearOpMode {
 
     // Declare OpMode members.

@@ -29,20 +29,32 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorController;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
+
 import com.vuforia.Vec2F;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 
 import java.util.List;
-
 
 /**
  * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
@@ -57,97 +69,63 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="QT_Autonomous_Depot", group="Linear Opmode")
+@Autonomous(name="QT Autonomous Depot", group="Linear Opmode")
 public class QT_Autonomous_Depot extends LinearOpMode {
-
-    private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
-    private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
-    private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
-
-    /*
-     * IMPORTANT: You need to obtain your own license key to use Vuforia. The string below with which
-     * 'parameters.vuforiaLicenseKey' is initialized is for illustration only, and will not function.
-     * A Vuforia 'Development' license key, can be obtained free of charge from the Vuforia developer
-     * web site at https://developer.vuforia.com/license-manager.
-     *
-     * Vuforia license keys are always 380 characters long, and look as if they contain mostly
-     * random data. As an example, here is a example of a fragment of a valid key:
-     *      ... yIgIzTqZ4mWjk9wd3cZO9T1axEqzuhxoGlfOOI2dRzKS4T0hQ8kT ...
-     * Once you've obtained a license key, copy the string from the Vuforia web site
-     * and paste it in to your code on the next line, between the double quotes.
-     */
-    private static final String VUFORIA_KEY = "AW8pxAb/////AAABmc2pCnd0uUidheyLY5krCRBcvgnlBqrElE/ZP/pTLqZoxVQ8COgVDVpCp0pOmtF6HP9kyk7kh9Qjq0A6ND0F7A0iemGwWN2RxixFEOSWiDrSbc46XnYYpF+qCAkHx2w2e4tvJD4REtBPVTd7URXPnMEKqJde9cWVQc6D9gOFAa42CnkYsuvJZ2Kn2Lc51kuqyJ0szGwPjZUsA5vZ1vENH75y2tuym8jY4oRl2BYsmehEotnxApXt/6D+gdYsb7cGAyZuHxXx00zp+gGTlnrhJdEx9DnQVjI2HLBi6j848ayI200c8jCVqiVtv+NExtP3NCDY66YGGKp+so0pJ7MRUWYrJ7+4n4kGKg59erl+UIjO";
-
-    /**
-     * {@link #vuforia} is the variable we will use to store our instance of the Vuforia
-     * localization engine.
-     */
-    private VuforiaLocalizer vuforia;
-
-    /**
-     * {@link #tfod} is the variable we will use to store our instance of the Tensor Flow Object
-     * Detection engine.
-     */
-
-    private TFObjectDetector tfod;
-
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
     private DcMotor liftDrive = null;
+    private CRServo collectorDrive = null;
 
-    final int HANGING = 1;
-    final int UNLATCH = 2;
-    final int BACKUP = 3;
-    final int SAMPLE = 4;
-    final int PUSH_AND_CLAIM = 5;
-    final int TURNRIGHTTODEPOT = 6;
-    final int TURNLEFTTODEPOT = 7;
-    final int ENDINDEPOT = 8;
-    final int SLEEP = 9;
-    final int TURNLEFTALITTLETODEPOT = 10;
-    final int TURNRIGHTALITTLETODEPOT = 11;
-    final int POSONE = 13;
-    final int DONE = 100;
-    final int TEST = 101;
-    final int SAMPLETEST = 102;
-    final int FINALSAMPLE = 12;
-    final int turn = 14;
-    final int REVERSEJERK = 15;
-    boolean inCrater = false;
-    boolean turned = false;
-    boolean backed = false;
-    boolean unlatchSleep = false;
+    private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
+    private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
+    private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
+    private static final String VUFORIA_KEY = "AW8pxAb/////AAABmc2pCnd0uUidheyLY5krCRBcvgnlBqrElE/ZP/pTLqZoxVQ8COgVDVpCp0pOmtF6HP9kyk7kh9Qjq0A6ND0F7A0iemGwWN2RxixFEOSWiDrSbc46XnYYpF+qCAkHx2w2e4tvJD4REtBPVTd7URXPnMEKqJde9cWVQc6D9gOFAa42CnkYsuvJZ2Kn2Lc51kuqyJ0szGwPjZUsA5vZ1vENH75y2tuym8jY4oRl2BYsmehEotnxApXt/6D+gdYsb7cGAyZuHxXx00zp+gGTlnrhJdEx9DnQVjI2HLBi6j848ayI200c8jCVqiVtv+NExtP3NCDY66YGGKp+so0pJ7MRUWYrJ7+4n4kGKg59erl+UIjO";
+    private VuforiaLocalizer vuforia;
+    private TFObjectDetector tfod;
+    boolean encoderTest_defineMotorTypeOnce = false;
+    BNO055IMU imu;
+    Orientation lastAngles = new Orientation();
+    double globalAngle, power = .30, correction;
+    boolean aButton, bButton, touched;
+
+    private int goldPos = -1; // position of gold mineral - 0 means G-S-S, 1 means S-G-S, and 2 means S-S-G
+
+    //all tasks
+    final int SAMPLE_RECOGNITION = 0;
+    final int LANDING_AND_UNLATCHING_FROM_LANDER = 1;
+    final int BACKUP = 2;
+    final int GOLD_CASE_ZERO = 3;//when gold is on the left side
+    final int GOLD_CASE_ONE = 4; //when gold is in the middle
+    final int GOLD_CASE_TWO = 5;// when gold os on the right side
+    final int GOTO_DEPOT_ZERO = 6;
+    final int GOTO_DEPOT_ONE = 7;
+    final int GOTO_DEPOT_TWO = 8;
+    final int GO_STRAIGHT_GOLD_TWO = 9;
+    final int CLAIM = 10;
+    final int RETRACT_LIFT = 11;
+    final int ALLTASKSCOMPLETED = 100;
+    final int ENCODERTEST = 101;
+    final int TEST = 102;
+    final int RETRACT_LIFT_TIME = 12000;
+
     long tStart;
-    int state;
-    boolean timeReset = false;
-    boolean foundGold = false;
-    long TimeSample;
-    int positionOfGold;// 0 = Gold is Left      1 = Gold is in the middle     2 = Gold is right
-    long pos;
+    int currentTask;
+    boolean timeReset;
+    boolean moveByTimeFinish;
+    static final double COUNTS_PER_MOTOR_REV = 1120;    // eg: TETRIX Motor Encoder
+    static final double DRIVE_GEAR_REDUCTION = 2.0;     // This is < 1.0 if geared UP
+    static final double WHEEL_DIAMETER_INCHES = 4.0;     // For figuring circumference
+    static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
 
     @Override
-    public void runOpMode() throws InterruptedException {
-        telemetry.addData("Status", "Initialized");
+    public void runOpMode() {
+
+        telemetry.addData("Configuring IMU...", "Please wait.");
         telemetry.update();
 
-        // Initialize the hardware variables. Note that the strings used here as parameters
-        // to 'get' must correspond to the names assigned during the robot configuration
-        // step (using the FTC Robot Controller app on the phone).
-        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
-        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
-        liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
-
-        // Most robots need the motor on one side to be reversed to drive forward
-        // Reverse the motor that runs backwards when connected directly to the battery
-        leftDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightDrive.setDirection(DcMotor.Direction.FORWARD);
-        liftDrive.setDirection(DcMotor.Direction.FORWARD);
-
-        // The TFObjectDetector uses the camera frames from the VuforiaLocalizer, so we create that
-        // first.
         initVuforia();
 
         if (ClassFactory.getInstance().canCreateTFObjectDetector()) {
@@ -156,229 +134,321 @@ public class QT_Autonomous_Depot extends LinearOpMode {
             telemetry.addLine("Sorry! This device is not compatible with TFOD");
         }
 
-        /** Activate Tensor Flow Object Detection. */
         if (tfod != null) {
             tfod.activate();
+        } else {
+            telemetry.addLine("Sorry! Could not activate TFOD");
         }
+
+        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
+        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
+        liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
+        leftDrive.setDirection(DcMotor.Direction.REVERSE);
+        leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightDrive.setDirection(DcMotor.Direction.FORWARD);
+        rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        liftDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        collectorDrive = hardwareMap.get(CRServo.class, "collector_drive");
+
+        telemetry.addData("Calibrating ", "IMU");
+        telemetry.update();
+
+        // set up IMU
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.loggingEnabled = true;
+        parameters.loggingTag = "IMU";
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+
+        // compensate for vertical Rev hub
+        byte AXIS_MAP_CONFIG_BYTE = 0x6; //This is what to write to the AXIS_MAP_CONFIG register to swap x and z axes
+        byte AXIS_MAP_SIGN_BYTE = 0x1; //This is what to write to the AXIS_MAP_SIGN register to negate the z axis
+
+        //Need to be in CONFIG mode to write to registers
+        imu.write8(BNO055IMU.Register.OPR_MODE, BNO055IMU.SensorMode.CONFIG.bVal & 0x0F);
+
+        sleep(100); //Changing modes requires a delay before doing anything else
+
+        //Write to the AXIS_MAP_CONFIG register
+        imu.write8(BNO055IMU.Register.AXIS_MAP_CONFIG, AXIS_MAP_CONFIG_BYTE & 0x0F);
+
+        //Write to the AXIS_MAP_SIGN register
+        imu.write8(BNO055IMU.Register.AXIS_MAP_SIGN, AXIS_MAP_SIGN_BYTE & 0x0F);
+
+        //Need to change back into the IMU mode to use the gyro
+        imu.write8(BNO055IMU.Register.OPR_MODE, BNO055IMU.SensorMode.IMU.bVal & 0x0F);
+
+        sleep(100); //Changing modes again requires a delay
+
+        // make sure the imu gyro is calibrated before continuing.
+        while (!isStopRequested() && !imu.isGyroCalibrated()) {
+            sleep(50);
+            idle();
+        }
+
+        telemetry.addData("imu calib status", imu.getCalibrationStatus().toString());
+        telemetry.addData("Mode", "waiting for start");
+        telemetry.update();
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
-
-        // start off hanging
+        currentTask = SAMPLE_RECOGNITION;
         tStart = System.currentTimeMillis();
-        state = SAMPLETEST;
 
-        // Setup a variable for each drive wheel to save power level for telemetry
-        double leftPower;
-        double rightPower;
-        boolean tfodInitialized = false;
-
+        // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            if (tfod != null) {
-                switch (state) {
-                    case SAMPLETEST:
-                        int goldPos = findSamplingPos();
-                        break;
 
-                    case TEST:
-                        telemetry.addLine("in TEST");
-                        telemetry.update();
-                        if (System.currentTimeMillis() - tStart < 5000) {
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(-0.5);
-                        }
-                        else {
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            state = DONE;
-                        }
-                        break;
+            double leftPower = 0.0;
+            double rightPower = 0.0;
 
-                        case HANGING:
-                        if (System.currentTimeMillis() - tStart < 8700) {
-                            liftDrive.setPower(1.0);
-                        } else {
-                            liftDrive.setPower(0.0);
-                            state = UNLATCH;
-                            tStart = System.currentTimeMillis();
-                        }
-                        break;
-                        case UNLATCH:
-                            moveByTime(-0.5, 0.5, 475, SLEEP);
-                        break;
-                    case SLEEP:
-                        Thread.sleep(1000);
-                        state = BACKUP;
-                        break;
-
-                        case BACKUP:
-                            moveByTime(-0.4, -0.4, 150, SAMPLE);
-                            TimeSample = System.currentTimeMillis();
-                        break;
-
-                        case SAMPLE:
-                        List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
-                        if (updatedRecognitions != null) {
-                            if (updatedRecognitions.size() > 0) {
-                                telemetry.addData("# Objects Detected", updatedRecognitions.size());
-                                telemetry.update();
-                                for (Recognition recognition : updatedRecognitions) {
-                                    if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
-                                        foundGold = true;
-                                        
-                                        // gold found; turn power off right away
-                                        leftPower = 0.0;
-                                        rightPower = 0.0;
-                                        leftDrive.setPower(leftPower);
-                                        rightDrive.setPower(rightPower);
-
-                                        telemetry.addData("Found Gold at ", recognition.getLeft());
-                                        telemetry.update();
-
-                                        pos = System.currentTimeMillis()-TimeSample;
-                                        if(pos<2000){//900
-                                            telemetry.addLine("Gold | Silver | Silver");
-
-                                            positionOfGold = 0;
-                                            state = PUSH_AND_CLAIM;
-                                        }
-                                        else if((pos>2000)&&(pos<4000)){//1400      2400
-                                            telemetry.addLine("Silver | Gold | Silver");
-                                            positionOfGold = 1;
-                                            state = PUSH_AND_CLAIM;
-                                        }
-                                        else if(pos>4000){// 3000
-                                            telemetry.addLine("Silver | Silver | Gold");
-                                            positionOfGold = 2;
-                                            state = PUSH_AND_CLAIM;
-                                        }
-                                        telemetry.addData("pos:",(pos) );
-                                        telemetry.update();
-                                        tStart = System.currentTimeMillis();
-                                    }
-                                }
-                            }
-
-                            if (!foundGold) { // gold not found. Turn to the right
-                                telemetry.addLine("still not found gold...turning");
-                                telemetry.update();
-                                leftPower = 0.5;
-                                rightPower = -0.5;
-                                leftDrive.setPower(leftPower);
-                                rightDrive.setPower(rightPower);
-                                Thread.sleep(50);//50
-                                leftDrive.setPower(0.0);
-                                rightDrive.setPower(0.0);
-                                Thread.sleep(50);
-                            } 
-/*                            else {
-                                leftPower = 0.0;
-                                rightPower = 0.0;
-                                leftDrive.setPower(leftPower);
-                                rightDrive.setPower(rightPower);
-                                tStart = System.currentTimeMillis();
-                            }
-*/
-                            Thread.sleep(100);
-                            telemetry.update();
-                        }
-                        break;
-
-                        case PUSH_AND_CLAIM:
-                        if(positionOfGold == 0){
-                            // push to depot
-                            moveByTime(-0.4, -0.4, 1300, TURNRIGHTTODEPOT);
-
-                        }
-                        else if(positionOfGold == 1){
-                            //middle. Go fwd to depot
-                            moveByTime(-0.5, -0.5, 1750, REVERSEJERK);//change to 1750 so team marker get dropped off
-
-                        }
-                        else if (positionOfGold == 2){
-                            // push to depot
-                            moveByTime(-0.4, -0.4, 1300, TURNLEFTTODEPOT);
-                        }
-                        break;
-
-                        case TURNRIGHTTODEPOT:
-                            moveByTime(0.4, -0.4, 1750, ENDINDEPOT);
-                        break;
-
-                        case TURNLEFTTODEPOT:
-                            moveByTime(-0.4, 0.4, 1300, ENDINDEPOT);
-                            break;
-
-                    case TURNLEFTALITTLETODEPOT:
-                        moveByTime(-0.4, 0.4, 250, ENDINDEPOT);
-                        break;
-                    case POSONE:
-                        moveByTime(-0.4, -0.4, 1500, TURNLEFTALITTLETODEPOT);
-
-                        break;
-
-                        case ENDINDEPOT:
-                            // move forward
-                            moveByTime(-0.4, -0.4, 1200, REVERSEJERK);
-                            break;
-
-                        case FINALSAMPLE:
+            switch (currentTask) {
+                case TEST:
+/*
+                    if (System.currentTimeMillis() - tStart < 5000) {
+                        leftDrive.setPower(0.5);
+                        rightDrive.setPower(0.5);
+                    } else {
                         tStart = System.currentTimeMillis();
-                        if((System.currentTimeMillis()-tStart<1000)&&(!backed)){//2000
-                            leftDrive.setPower(0.3);
-                            rightDrive.setPower(0.3);
-                        }
-                        else{
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            backed = true;
-                            state = REVERSEJERK;
-
-                        }
-                        break;
-                    case REVERSEJERK:
-                        moveByTime(1.0, 1.0, 300, DONE);
-                        break;
-                        case DONE:
-                            leftDrive.setPower(0.0);
-                            rightDrive.setPower(0.0);
-                            telemetry.addData("pos:",pos);
-                            telemetry.update();
-                            break;
-
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        currentTask = ALLTASKSCOMPLETED;
                     }
+*/
+
+                    break;
+                case SAMPLE_RECOGNITION:
+                    goldPos = findGoldPosition();
+                    if (goldPos != -1) {
+                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        tStart = System.currentTimeMillis();
+                    } else if (System.currentTimeMillis() - tStart > 6000) { // gold not found for 6 seconds...move on!
+                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        goldPos = 1; // assume gold is in the middle and move on
+                        tStart = System.currentTimeMillis();
+                    }
+                    break;
+
+                case LANDING_AND_UNLATCHING_FROM_LANDER:
+                    if (System.currentTimeMillis() - tStart < RETRACT_LIFT_TIME) {
+                        liftDrive.setPower(1.0);
+                    } else {
+                        tStart = System.currentTimeMillis();
+                        liftDrive.setPower(0.0);
+
+                        // unlatch
+                        rotate(20, 0.4);
+                        tStart = System.currentTimeMillis();
+                        currentTask = BACKUP;
+                    }
+                    break;
+
+                case BACKUP:
+                    if (System.currentTimeMillis() - tStart < 250) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    } else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        tStart = System.currentTimeMillis();
+                        switch (goldPos) {
+                            case 0:
+                                currentTask = GOLD_CASE_ZERO;
+                                break;
+                            case 1:
+                                currentTask = GOLD_CASE_ONE;
+                                break;
+                            case 2:
+                                currentTask = GOLD_CASE_TWO;
+                                break;
+                        }
+                    }
+                    break;
+
+                case GOLD_CASE_ZERO:
+                    if (System.currentTimeMillis() - tStart < 2500) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    } else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        rotate(-60, 0.4);
+                        currentTask = GOTO_DEPOT_ZERO;
+                        tStart = System.currentTimeMillis();
+                    }
+                    break;
+
+                case GOLD_CASE_ONE:
+                    rotate(-30, 0.4);
+                    currentTask = GOTO_DEPOT_ONE;
+                    tStart = System.currentTimeMillis();
+                    break;
+
+                case GOLD_CASE_TWO:
+                    rotate(-50, 0.4);
+                    currentTask = GO_STRAIGHT_GOLD_TWO;
+                    tStart = System.currentTimeMillis();
+                    break;
+
+                case GOTO_DEPOT_ZERO:
+                    if (System.currentTimeMillis() - tStart < 2000) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    } else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        currentTask = CLAIM;
+                        tStart = System.currentTimeMillis();
+                    }
+                    break;
+
+                case GOTO_DEPOT_ONE:
+                    if (System.currentTimeMillis() - tStart < 3500) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    } else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        currentTask = CLAIM;
+                        tStart = System.currentTimeMillis();
+                    }
+                    break;
+
+                case GO_STRAIGHT_GOLD_TWO:
+                    if (System.currentTimeMillis() - tStart < 1700) {
+                        // don't turn. Just go straight towards gold
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    } else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        rotate(90, 0.4);
+                        currentTask = GOTO_DEPOT_TWO;
+                        tStart = System.currentTimeMillis();
+                    }
+
+                    break;
+
+                case GOTO_DEPOT_TWO:
+
+                    if (System.currentTimeMillis() - tStart < 2000) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    } else {
+                        leftDrive.setPower(-0.0);
+                        rightDrive.setPower(-0.0);
+                        currentTask = CLAIM;
+                        tStart = System.currentTimeMillis();
+                    }
+                    break;
+
+                case CLAIM:
+                    telemetry.addLine("In Claim");
+                    telemetry.update();
+                    if (System.currentTimeMillis() - tStart < 2000) {
+                        collectorDrive.setPower(0.79);
+                        if (System.currentTimeMillis() - tStart > 1000) {
+                            leftDrive.setPower(0.4);
+                            rightDrive.setPower(0.4);
+                        }
+                    } else {
+                        collectorDrive.setPower(0.0);
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        currentTask = RETRACT_LIFT;
+                        tStart = System.currentTimeMillis();
+                    }
+                    break;
+
+                case RETRACT_LIFT:
+                    if (System.currentTimeMillis() - tStart < RETRACT_LIFT_TIME) {
+                        liftDrive.setPower(-1.0);
+                    }
+                    else {
+                        liftDrive.setPower(0.0);
+                        currentTask = ALLTASKSCOMPLETED;
+                    }
+                    break;
+
+                case ALLTASKSCOMPLETED:
+                    leftDrive.setPower(0.0);
+                    rightDrive.setPower(0.0);
+                    telemetry.addData("Goldpos=", goldPos);
+                    telemetry.update();
+                    break;
+
+                case ENCODERTEST:
+                    if (!encoderTest_defineMotorTypeOnce) {
+                        GoStraight(24);
+                        encoderTest_defineMotorTypeOnce = true;
+                    }
+
+                    telemetry.addLine("done");
+
+
+                    break;
+
+
+            }
+            telemetry.addData("Status", "Run Time: " + runtime.toString());
+            telemetry.addData("Gold location: ", goldPos);
+            telemetry.update();
+            idle();
         }
     }
 
-    if(tfod !=null)
-    {
-        tfod.shutdown();
-    }
-}
+    // find gold position using TFLite
+    private int findGoldPosition() {
+        int goldMineralX, silverMineral1X, silverMineral2X, gPos = -1;
 
-    private void moveByTime (double leftP, double rightP, int time, int nextState) {
-        if (!timeReset) {
-            timeReset = true;
-            tStart = System.currentTimeMillis();
-            telemetry.addData("first time", runtime.toString());
-            telemetry.update();
-        }
-        else {
-            telemetry.addData("here", runtime.toString());
-            telemetry.update();
-            if(System.currentTimeMillis()-tStart < time){
-                leftDrive.setPower(leftP);
-                rightDrive.setPower(rightP);
+        if (tfod != null) {
+            List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+            if (updatedRecognitions != null) {
+                if (updatedRecognitions.size() > 0) {
+                    goldMineralX = -1;
+                    silverMineral1X = -1;
+                    silverMineral2X = -1;
+
+                    telemetry.addData("# Objects Detected", updatedRecognitions.size());
+                    telemetry.update();
+
+                    for (Recognition recognition : updatedRecognitions) {
+                        int left = (int) recognition.getLeft();
+                        if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                            goldMineralX = (int) recognition.getLeft();
+                        } else if (silverMineral1X == -1) {
+                            silverMineral1X = (int) recognition.getLeft();
+                        } else {
+                            silverMineral2X = (int) recognition.getLeft();
+                        }
+                    }
+                    if (silverMineral2X == -1) {
+                        if (goldMineralX > silverMineral1X) {
+                            gPos = 1;
+                            telemetry.addLine("S-G-S");
+                            telemetry.update();
+                            currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        } else {
+                            gPos = 0;
+                            telemetry.addLine("G-S-S");
+                            telemetry.update();
+                            currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        }
+                    } else {
+                        gPos = 2;
+                        telemetry.addLine("S-S-G");
+                        telemetry.update();
+                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                    }
+                }
             }
-            else {
-                leftDrive.setPower(0.0);
-                rightDrive.setPower(0.0);
-                timeReset = false;
-                state = nextState;
-            }
+
         }
+        return gPos;
     }
+
 
     /**
      * Initialize the Vuforia localization engine.
@@ -394,13 +464,6 @@ public class QT_Autonomous_Depot extends LinearOpMode {
 
         //  Instantiate the Vuforia engine
         vuforia = ClassFactory.getInstance().createVuforia(parameters);
-        Vec2F size = vuforia.getCameraCalibration().getSize();
-
-//        telemetry.addData("sizex = ", size.getData()[0]);
-//        telemetry.addData("sizey = ", size.getData()[1]);
-//        telemetry.update();
-
-        // Loading trackables is not necessary for the Tensor Flow Object Detection engine.
     }
 
     /**
@@ -412,57 +475,145 @@ public class QT_Autonomous_Depot extends LinearOpMode {
         TFObjectDetector.Parameters tfodParameters = new TFObjectDetector.Parameters(tfodMonitorViewId);
         tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
         tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL, LABEL_SILVER_MINERAL);
-//        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL);
     }
 
-    private int findSamplingPos() throws InterruptedException {
-        telemetry.addLine("in findSamplingPos");
-        telemetry.update();
+    /**
+     * Resets the cumulative angle tracking to zero.
+     */
+    private void resetAngle() {
+        lastAngles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
-        List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
-        if (updatedRecognitions != null) {
-            if (updatedRecognitions.size() > 0) {
-                int goldMineralX = -1;
-                int silverMineral1X = -1;
-                int silverMineral2X = -1;
+        globalAngle = 0;
+    }
 
-                telemetry.addData("# Objects Detected", updatedRecognitions.size());
-                telemetry.update();
+    /**
+     * Get current cumulative angle rotation from last reset.
+     *
+     * @return Angle in degrees. + = left, - = right.
+     */
+    private double getAngle() {
+        // We experimentally determined the Z axis is the axis we want to use for heading angle.
+        // We have to process the angle because the imu works in euler angles so the Z axis is
+        // returned as 0 to +180 or 0 to -180 rolling back to -179 or +179 when rotation passes
+        // 180 degrees. We detect this transition and track the total cumulative angle of rotation.
 
-                for (Recognition recognition : updatedRecognitions) {
-                    int left = (int) recognition.getLeft();
-                    if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
-                        goldMineralX = left;
-                    } else if (silverMineral1X == -1) {
-                        silverMineral1X = left;
-                    } else {
-                        silverMineral2X = left;
-                    }
-                }
-                if (silverMineral2X == -1) {
-                    if (goldMineralX > silverMineral1X) {
-                        telemetry.addLine("mid");
-                        telemetry.update();
-                        return 1;
-                    } else {
-                        telemetry.addLine("left");
-                        telemetry.update();
-                        return 0;
-                    }
-                } else {
-                    telemetry.addLine("right");
-                    telemetry.update();
-                    return 2;
-                }
+        Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
+        double deltaAngle = angles.firstAngle - lastAngles.firstAngle;
 
+        if (deltaAngle < -180)
+            deltaAngle += 360;
+        else if (deltaAngle > 180)
+            deltaAngle -= 360;
+
+        globalAngle += deltaAngle;
+
+        lastAngles = angles;
+
+        return globalAngle;
+    }
+
+    /**
+     * See if we are moving in a straight line and if not return a power correction value.
+     *
+     * @return Power adjustment, + is adjust left - is adjust right.
+     */
+    private double checkDirection() {
+        // The gain value determines how sensitive the correction is to direction changes.
+        // You will have to experiment with your robot to get small smooth direction changes
+        // to stay on a straight line.
+        double correction, angle, gain = .10;
+
+        angle = getAngle();
+
+        if (angle == 0)
+            correction = 0;             // no adjustment.
+        else
+            correction = -angle;        // reverse sign of angle for correction.
+
+        correction = correction * gain;
+
+        return correction;
+    }
+
+    /**
+     * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
+     *
+     * @param degrees Degrees to turn, + is left - is right
+     */
+    private void rotate(int degrees, double power) {
+
+        double leftPower, rightPower;
+
+        // restart imu movement tracking.
+        resetAngle();
+
+        // getAngle() returns + when rotating counter clockwise (left) and - when rotating
+        // clockwise (right).
+
+        if (degrees < 0) {   // turn right.
+            leftPower = power;
+            rightPower = -power;
+        } else if (degrees > 0) {   // turn left.
+            leftPower = -power;
+            rightPower = power;
+        } else return;
+
+        // set power to rotate.
+        leftDrive.setPower(leftPower);
+        rightDrive.setPower(rightPower);
+
+        // rotate until turn is completed.
+        if (degrees < 0) {
+            // On right turn we have to get off zero first.
+            while (opModeIsActive() && getAngle() == 0) {
             }
-        }
-        telemetry.addLine("shouldnt be here");
-        telemetry.update();
-        return -1;
+
+            while (opModeIsActive() && getAngle() > degrees) {
+            }
+        } else    // left turn.
+            while (opModeIsActive() && getAngle() < degrees) {
+            }
+
+        // turn the motors off.
+        rightDrive.setPower(0);
+        leftDrive.setPower(0);
+
+        // wait for rotation to stop.
+        sleep(100);
+
+        // reset angle tracking on new heading.
+        resetAngle();
     }
+
+    void GoStraight(int distanceInInches) {
+
+        // set right motor to run without regard to an encoder.
+        rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        int newTarget = leftDrive.getCurrentPosition() - (int) (distanceInInches * COUNTS_PER_INCH);
+
+        leftDrive.setTargetPosition(newTarget);
+        // set left motor to run to target encoder position and stop with brakes on.
+        leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        // set both motors to 25% power. Movement will start.
+        leftDrive.setPower(0.5);
+        rightDrive.setPower(0.5);
+
+        while (leftDrive.isBusy()) {
+            telemetry.addData("newTarget=", newTarget);
+            telemetry.addData("curPos=", leftDrive.getCurrentPosition());
+            telemetry.addData("encoder-fwd", leftDrive.getCurrentPosition() + "  busy=" + leftDrive.isBusy());
+            telemetry.update();
+            idle();
+        }
+
+        leftDrive.setPower(0.0);
+        rightDrive.setPower(0.0);
+
+        leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+    }
+
 }
-
-
-

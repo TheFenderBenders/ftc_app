@@ -50,8 +50,9 @@ import com.qualcomm.robotcore.util.Range;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Basic: Linear OpMode", group="Linear Opmode")
-public class BasicOpMode_Linear extends LinearOpMode {
+@TeleOp(name="Encoder Test2", group="Linear Opmode")
+@Disabled
+public class EncoderTest extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -74,9 +75,47 @@ public class BasicOpMode_Linear extends LinearOpMode {
         leftDrive.setDirection(DcMotor.Direction.FORWARD);
         rightDrive.setDirection(DcMotor.Direction.REVERSE);
 
+        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        // set left motor to run to target encoder position and stop with brakes on.
+        leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        // set right motor to run without regard to an encoder.
+        rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        leftDrive.setTargetPosition(1000);
+
+        // set both motors to 25% power. Movement will start.
+
+        leftDrive.setPower(-0.5);
+        rightDrive.setPower(-0.5);
+
+        while (leftDrive.isBusy()) {
+            telemetry.addData("encoder-fwd", leftDrive.getCurrentPosition() + "  busy=" + leftDrive.isBusy());
+            telemetry.update();
+            idle();
+        }
+
+        leftDrive.setPower(0.0);
+        rightDrive.setPower(0.0);
+
+        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        telemetry.addData("Mode", "waiting");
+        telemetry.update();
+
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
+
+        telemetry.addData("Mode", "running");
+        telemetry.update();
+
+        leftDrive.setTargetPosition(-1120);
+
+        leftDrive.setPower(-0.25);
+        rightDrive.setPower(-0.25);
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
@@ -85,29 +124,15 @@ public class BasicOpMode_Linear extends LinearOpMode {
             double leftPower;
             double rightPower;
 
-            // Choose to drive using either Tank Mode, or POV Mode
-            // Comment out the method that's not used.  The default below is POV.
+            while (leftDrive.isBusy()) {
+                telemetry.addData("encoder-fwd", leftDrive.getCurrentPosition() + "  busy=" + leftDrive.isBusy());
+                telemetry.update();
+                idle();
+            }
 
-            // POV Mode uses left stick to go forward, and right stick to turn.
-            // - This uses basic math to combine motions and is easier to drive straight.
-            double drive = -gamepad1.left_stick_y;
-            double turn  =  gamepad1.right_stick_x;
-            leftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
-            rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
+            leftDrive.setPower(0.0);
+            rightDrive.setPower(0.0);
 
-            // Tank Mode uses one stick to control each wheel.
-            // - This requires no math, but it is hard to drive forward slowly and keep straight.
-            // leftPower  = -gamepad1.left_stick_y ;
-            // rightPower = -gamepad1.right_stick_y ;
-
-            // Send calculated power to wheels
-            leftDrive.setPower(leftPower);
-            rightDrive.setPower(rightPower);
-
-            // Show the elapsed game time and wheel power.
-            telemetry.addData("Status", "Run Time: " + runtime.toString());
-            telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
-            telemetry.update();
         }
     }
 }

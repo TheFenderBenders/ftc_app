@@ -30,9 +30,12 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 
 /**
@@ -48,16 +51,13 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="testSpeed_Auto")
-public class testSpeed_Auto extends LinearOpMode {
+@Autonomous(name="Motor Direction Test", group="Linear Opmode")
+public class MotorDirectionTest extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
-    private DcMotor liftDrive = null;
-float speed;
-
 
     @Override
     public void runOpMode() {
@@ -67,19 +67,18 @@ float speed;
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
+        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
-        liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
         leftDrive.setDirection(DcMotor.Direction.REVERSE);
         rightDrive.setDirection(DcMotor.Direction.FORWARD);
-        liftDrive.setDirection(DcMotor.Direction.FORWARD);
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
+
         long tStart = System.currentTimeMillis();
 
         // run until the end of the match (driver presses STOP)
@@ -88,72 +87,20 @@ float speed;
             // Setup a variable for each drive wheel to save power level for telemetry
             double leftPower;
             double rightPower;
-            speed = gamepad1.right_trigger+ gamepad1.left_trigger;
-          /*leftDrive.setPower(speed);
-            rightDrive.setPower(-speed);
 
-
-
-            if(gamepad1.right_bumper){*/
-
-
-
-                if(gamepad1.y) {
-                    leftDrive.setPower(0.1);
-                    rightDrive.setPower(-0.1);
-                }
-
-            if(gamepad1.b) {
-                leftDrive.setPower(0.2);
-                rightDrive.setPower(-0.2);
-            }
-
-            if(gamepad1.a) {
-                leftDrive.setPower(0.3);
-                rightDrive.setPower(-0.3);
-            }
-
-            if(gamepad1.x) {
+            // Send calculated power to wheels
+            if (System.currentTimeMillis() - tStart < 3000) {
                 leftDrive.setPower(0.4);
-                rightDrive.setPower(-0.4);
+                rightDrive.setPower(0.4);
             }
-
-
-
-            if(gamepad1.dpad_up) {
-                leftDrive.setPower(0.5);
-                rightDrive.setPower(-0.5);
-            }
-
-            if(gamepad1.dpad_right) {
-                leftDrive.setPower(0.6);
-                rightDrive.setPower(-0.6);
-            }
-
-            if(gamepad1.dpad_right) {
-                leftDrive.setPower(0.7);
-                rightDrive.setPower(-0.7);
-            }
-
-            if(gamepad1.dpad_down) {
-                leftDrive.setPower(0.8);
-                rightDrive.setPower(-0.8);
-            }
-
-
-
-                }
-                telemetry.addData("left", leftDrive.getPower());
-        telemetry.addData("right", rightDrive.getPower());
-        telemetry.update();
-                idle();
-            }
-                // Show the elapsed game time and wheel power.
+            else {
+                leftDrive.setPower(0.0);
+                rightDrive.setPower(0.0);
 
             }
-
-
-
-
-
-
+            // Show the elapsed game time and wheel power.
+            telemetry.addData("Status", "Run Time: " + runtime.toString());
+           telemetry.update();
+        }
+    }
+}

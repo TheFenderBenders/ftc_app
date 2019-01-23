@@ -31,17 +31,11 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
-
-import com.vuforia.Vec2F;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
@@ -66,8 +60,8 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="QT Autonomous Depot 2", group="Linear Opmode")
-public class QT_Autonomous_Depot2 extends LinearOpMode {
+@Autonomous(name="QT Autonomous Crater", group="Linear Opmode")
+public class QT_Autonomous_Crater extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -80,27 +74,38 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
     private static final String VUFORIA_KEY = "AW8pxAb/////AAABmc2pCnd0uUidheyLY5krCRBcvgnlBqrElE/ZP/pTLqZoxVQ8COgVDVpCp0pOmtF6HP9kyk7kh9Qjq0A6ND0F7A0iemGwWN2RxixFEOSWiDrSbc46XnYYpF+qCAkHx2w2e4tvJD4REtBPVTd7URXPnMEKqJde9cWVQc6D9gOFAa42CnkYsuvJZ2Kn2Lc51kuqyJ0szGwPjZUsA5vZ1vENH75y2tuym8jY4oRl2BYsmehEotnxApXt/6D+gdYsb7cGAyZuHxXx00zp+gGTlnrhJdEx9DnQVjI2HLBi6j848ayI200c8jCVqiVtv+NExtP3NCDY66YGGKp+so0pJ7MRUWYrJ7+4n4kGKg59erl+UIjO";
     private VuforiaLocalizer vuforia;
     private TFObjectDetector tfod;
-
+    boolean encoderTest_defineMotorTypeOnce = false;
     BNO055IMU imu;
     Orientation lastAngles = new Orientation();
     double globalAngle, power = .30, correction;
     boolean aButton, bButton, touched;
 
-
     private int goldPos = -1; // position of gold mineral - 0 means G-S-S, 1 means S-G-S, and 2 means S-S-G
 
    //all tasks
-   final int SAMPLE_RECOGNITION = 0;
-   final int LANDING_AND_UNLATCHING_FROM_LANDER = 1;
-   final int BACKUP = 2;
-   final int GOLD_CASE_ZERO = 3;//when gold is on the left side
-   final int GOLD_CASE_ONE = 4; //when gold is in the middle
-   final int GOLD_CASE_TWO = 5;// when gp;d os on the right side
-   final int ALLTASKSCOMPLETED = 100;
+    final int SAMPLE_RECOGNITION = 0;
+    final int LANDING_AND_UNLATCHING_FROM_LANDER = 1;
+    final int BACKUP = 2;
+    final int GOLD_CASE_ZERO = 3;//when gold is on the left side
+    final int GOLD_CASE_ONE = 4; //when gold is in the middle
+    final int GOLD_CASE_TWO = 5;// when gold os on the right side
+    final int GOTO_CRATER_ZERO = 6;
+    final int GOTO_CRATER_ONE = 7;
+    final int GOTO_CRATER_TWO = 8;
+    final int GO_STRAIGHT_GOLD_TWO = 9;
+    final int ALLTASKSCOMPLETED = 100;
+    final int ENCODERTEST = 101;
 
    long tStart;
    int currentTask;
 
+    static final double     COUNTS_PER_MOTOR_REV    = 1120 ;    // eg: TETRIX Motor Encoder
+    static final double     DRIVE_GEAR_REDUCTION    = 2.0 ;     // This is < 1.0 if geared UP
+    static final double     WHEEL_DIAMETER_INCHES   = 4.0 ;     // For figuring circumference
+    static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
+
+
+    static final int CUTTOFFPOINT = 500;
     @Override
     public void runOpMode() {
 
@@ -128,20 +133,13 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
         leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        telemetry.addData("Status", "Initialized");
+        telemetry.addData("Calibrating ", "IMU");
         telemetry.update();
 
         // set up IMU
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-
-        parameters.mode                = BNO055IMU.SensorMode.IMU;
-        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
-        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.loggingEnabled      = false;
-
-        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
-        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
-        // and named "imu".
+        parameters.loggingEnabled = true;
+        parameters.loggingTag     = "IMU";
         imu = hardwareMap.get(BNO055IMU.class, "imu");
         imu.initialize(parameters);
 
@@ -165,9 +163,6 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
 
         sleep(100); //Changing modes again requires a delay
 
-        telemetry.addData("Mode", "calibrating...");
-        telemetry.update();
-
         // make sure the imu gyro is calibrated before continuing.
         while (!isStopRequested() && !imu.isGyroCalibrated())
         {
@@ -175,8 +170,8 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
             idle();
         }
 
-        telemetry.addData("Mode", "waiting for start");
         telemetry.addData("imu calib status", imu.getCalibrationStatus().toString());
+        telemetry.addData("Mode", "waiting for start");
         telemetry.update();
 
         // Wait for the game to start (driver presses PLAY)
@@ -190,62 +185,21 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
 
             double leftPower = 0.0;
             double rightPower = 0.0;
-            int goldMineralX, silverMineral1X, silverMineral2X;
 
             switch (currentTask) {
                 case SAMPLE_RECOGNITION:
-                if (tfod != null) {
-                    List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
-                    if (updatedRecognitions != null) {
-                        if (updatedRecognitions.size() > 0) {
-                            goldMineralX = -1;
-                            silverMineral1X = -1;
-                            silverMineral2X = -1;
+                    goldPos = findGoldPosition();
+                    if (goldPos != -1) {
+//                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
 
-                            telemetry.addData("# Objects Detected", updatedRecognitions.size());
-                            telemetry.update();
-
-                            for (Recognition recognition : updatedRecognitions) {
-                                int left = (int) recognition.getLeft();
-                                if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
-                                    goldMineralX = (int) recognition.getLeft();
-                                } else if (silverMineral1X == -1) {
-                                    silverMineral1X = (int) recognition.getLeft();
-                                } else {
-                                    silverMineral2X = (int) recognition.getLeft();
-                                }
-                            }
-                            if (silverMineral2X == -1) {
-                                if (goldMineralX > silverMineral1X) {
-                                    goldPos = 1;
-                                    telemetry.addLine("S-G-S");
-                                    telemetry.update();
-                                    currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
-                                } else {
-                                    goldPos = 0;
-                                    telemetry.addLine("G-S-S");
-                                    telemetry.update();
-                                    currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
-                                }
-                            } else {
-                                goldPos = 2;
-                                telemetry.addLine("S-S-G");
-                                telemetry.update();
-                                currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
-                            }
-                        }
+                        tStart = System.currentTimeMillis();
                     }
-
-                }
-
-                if (goldPos != -1) {
-                    currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
-                    tStart = System.currentTimeMillis();
-                }
-                else if (System.currentTimeMillis() - tStart > 6000) { // gold not found for 6 seconds...move on!
-                    currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
-                    tStart = System.currentTimeMillis();
-                }
+                    else if (System.currentTimeMillis() - tStart > 6000) { // gold not found for 6 seconds...move on and go straight to the depot
+                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        goldPos = 1;
+                        tStart = System.currentTimeMillis();
+                    }
                 break;
 
                 case LANDING_AND_UNLATCHING_FROM_LANDER:
@@ -256,14 +210,22 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
                         liftDrive.setPower(0.0);
 
                         // unlatch
-                        rotate(20, 0.4);
+                        rotate(30, 0.4);
                         tStart = System.currentTimeMillis();
                         currentTask = BACKUP;
+                    }
+                    break;
 
-
-
-                        // do
-/*                        switch (goldPos) {
+                case BACKUP:
+                    if (System.currentTimeMillis() - tStart < 250) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    }
+                    else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        tStart = System.currentTimeMillis();
+                        switch (goldPos) {
                             case 0:
                                 currentTask = GOLD_CASE_ZERO;
                                 break;
@@ -274,12 +236,12 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
                                 currentTask = GOLD_CASE_TWO;
                                 break;
                         }
-                        */
                     }
                     break;
 
-                case BACKUP:
-                    if (System.currentTimeMillis() - tStart < 500) {
+                case GOLD_CASE_ZERO:
+                    if (System.currentTimeMillis() - tStart < 1750) {
+                        // don't turn. Just go straight towards gold
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
                     }
@@ -287,18 +249,48 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
                         leftDrive.setPower(0.0);
                         rightDrive.setPower(0.0);
                         currentTask = ALLTASKSCOMPLETED;
+                        tStart = System.currentTimeMillis();
                     }
                     break;
 
-                case GOLD_CASE_ZERO:
+                case GOLD_CASE_ONE:
+                    rotate(-30, 0.4);
+                    currentTask = GOTO_CRATER_ONE;
+                    tStart = System.currentTimeMillis();
                     break;
 
+                case GOLD_CASE_TWO:
+                    rotate(-70, 0.4);
+                    currentTask = GO_STRAIGHT_GOLD_TWO;
+                    tStart = System.currentTimeMillis();
+                    break;
 
+                case GOTO_CRATER_ONE:
+                    if (System.currentTimeMillis() - tStart < 1500) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    }
+                    else {
+                        leftDrive.setPower(-0.0);
+                        rightDrive.setPower(-0.0);
+                        currentTask = ALLTASKSCOMPLETED;
+                    }
+                    break;
 
+                case GO_STRAIGHT_GOLD_TWO:
+                    if (System.currentTimeMillis() - tStart < 1750) {
+                        // don't turn. Just go straight towards gold
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    }
+                    else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        currentTask = ALLTASKSCOMPLETED;
+                        tStart = System.currentTimeMillis();
+                    }
 
-
-
-
+                    break;
 
                 case ALLTASKSCOMPLETED:
                     leftDrive.setPower(0.0);
@@ -307,6 +299,18 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
                     telemetry.update();
                     break;
 
+                case ENCODERTEST:
+                    if(!encoderTest_defineMotorTypeOnce) {
+                        GoStraight(24);
+                        encoderTest_defineMotorTypeOnce = true;
+                    }
+
+                        telemetry.addLine("done");
+
+
+                    break;
+
+
             }
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Gold location: ", goldPos);
@@ -314,6 +318,63 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
             idle();
         }
     }
+
+    // find gold position using TFLite
+    private int findGoldPosition() {
+        int goldMineralX, silverMineral1X, silverMineral2X, gPos = -1;
+
+        if (tfod != null) {
+            List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+            if (updatedRecognitions != null) {
+                if (updatedRecognitions.size() > 0) {
+                    goldMineralX = -1;
+                    silverMineral1X = -1;
+                    silverMineral2X = -1;
+
+                    telemetry.addData("# Objects Detected", updatedRecognitions.size());
+                    telemetry.update();
+
+                    for (Recognition recognition : updatedRecognitions) {
+                        int left = (int) recognition.getLeft();
+                        int top = (int) recognition.getTop();
+                        telemetry.addData("top =  ", top);
+
+//                        if (top > CUTTOFFPOINT) {
+                            if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                                goldMineralX = (int) recognition.getLeft();
+                            } else if (silverMineral1X == -1) {
+                                silverMineral1X = (int) recognition.getLeft();
+                            } else {
+                                silverMineral2X = (int) recognition.getLeft();
+                            }
+  //                      }
+                    }
+                    if (silverMineral2X == -1) {
+                        if (goldMineralX > silverMineral1X) {
+                            gPos = 1;
+                            telemetry.addLine("S-G-S");
+                            telemetry.update();
+                            currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        } else {
+                            gPos = 0;
+                            telemetry.addLine("G-S-S");
+                            telemetry.update();
+                            currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        }
+                    } else {
+                        gPos = 2;
+                        telemetry.addLine("S-S-G");
+                        telemetry.update();
+                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                    }
+                }
+            }
+
+        }
+        return gPos;
+    }
+
+
 
     /**
      * Initialize the Vuforia localization engine.
@@ -448,10 +509,40 @@ public class QT_Autonomous_Depot2 extends LinearOpMode {
         leftDrive.setPower(0);
 
         // wait for rotation to stop.
-        sleep(1000);
+        sleep(100);
 
         // reset angle tracking on new heading.
         resetAngle();
+    }
+
+    void GoStraight(int distanceInInches) {
+
+        // set right motor to run without regard to an encoder.
+        rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        int newTarget = leftDrive.getCurrentPosition() - (int)(distanceInInches * COUNTS_PER_INCH);
+
+        leftDrive.setTargetPosition(newTarget);
+        // set left motor to run to target encoder position and stop with brakes on.
+        leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        // set both motors to 25% power. Movement will start.
+        leftDrive.setPower(0.5);
+        rightDrive.setPower(0.5);
+
+        while (leftDrive.isBusy()) {
+            telemetry.addData("newTarget=", newTarget);
+            telemetry.addData("curPos=", leftDrive.getCurrentPosition());
+            telemetry.addData("encoder-fwd", leftDrive.getCurrentPosition() + "  busy=" + leftDrive.isBusy());
+            telemetry.update();
+            idle();
+        }
+
+        leftDrive.setPower(0.0);
+        rightDrive.setPower(0.0);
+
+        leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
     }
 
 }

@@ -66,6 +66,7 @@ import java.util.List;
  */
 
 @Autonomous(name="LM3_Autonomous_Depot", group="Linear Opmode")
+@Disabled
 public class LM3_Autonomous_Depot extends LinearOpMode {
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
@@ -419,6 +420,8 @@ public class LM3_Autonomous_Depot extends LinearOpMode {
 //        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL, LABEL_SILVER_MINERAL);
         tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL);
     }
+
+
 
 
 }
