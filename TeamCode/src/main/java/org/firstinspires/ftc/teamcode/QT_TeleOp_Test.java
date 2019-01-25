@@ -80,6 +80,7 @@ public  class QT_TeleOp_Test extends LinearOpMode {
     double rightPower = 0.0;
     boolean forward = true;
     long reverseTimer;
+    boolean rev;
    //  int RAMPUP = 8;
 
     @Override
@@ -193,10 +194,7 @@ public  class QT_TeleOp_Test extends LinearOpMode {
                     forward = false;
                     reverseTimer = System.currentTimeMillis();
                     reverseTimer = System.currentTimeMillis();
-                    double tempVar = leftPower;
-                    leftPower = rightPower;
-                    rightPower = tempVar;
-
+                   rev = true;
                 }
                 else {
                     leftDrive.setDirection(DcMotor.Direction.REVERSE);
@@ -206,9 +204,23 @@ public  class QT_TeleOp_Test extends LinearOpMode {
                   //  double tempVar = leftPower;
                     //leftPower = rightPower;
                     //rightPower = tempVar;
+               rev = true;
                 }
+                reverseTimer = System.currentTimeMillis();
 
             }
+
+            if(java.lang.Math.abs(leftPower-rightPower)>0.3){
+                if(rev){
+                    rev = false;
+                    double tempVar = leftPower;
+                    leftPower = rightPower;
+                    rightPower = tempVar;
+                }
+            }
+
+
+
 
 
                 telemetry.addLine("pressed between pause");

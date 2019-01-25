@@ -33,6 +33,7 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
@@ -127,9 +128,9 @@ public class QT_Autonomous_Crater extends LinearOpMode {
         leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
         liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
-        leftDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftDrive.setDirection(DcMotor.Direction.REVERSE);
         liftDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightDrive.setDirection(DcMotor.Direction.FORWARD);
         leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
@@ -210,7 +211,7 @@ public class QT_Autonomous_Crater extends LinearOpMode {
                         liftDrive.setPower(0.0);
 
                         // unlatch
-                        rotate(30, 0.4);
+                        rotate(20, 0.4);
                         tStart = System.currentTimeMillis();
                         currentTask = BACKUP;
                     }
@@ -467,9 +468,9 @@ public class QT_Autonomous_Crater extends LinearOpMode {
      * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
      * @param degrees Degrees to turn, + is left - is right
      */
-    private void rotate(int degrees, double power)
-    {
-        double  leftPower, rightPower;
+    private void rotate(int degrees, double power) {
+
+        double leftPower, rightPower;
 
         // restart imu movement tracking.
         resetAngle();
@@ -477,32 +478,29 @@ public class QT_Autonomous_Crater extends LinearOpMode {
         // getAngle() returns + when rotating counter clockwise (left) and - when rotating
         // clockwise (right).
 
-        if (degrees < 0)
-        {   // turn right.
-            leftPower = -power;
-            rightPower = power;
-        }
-        else if (degrees > 0)
-        {   // turn left.
+        if (degrees < 0) {   // turn right.
             leftPower = power;
             rightPower = -power;
-        }
-        else return;
+        } else if (degrees > 0) {   // turn left.
+            leftPower = -power;
+            rightPower = power;
+        } else return;
 
         // set power to rotate.
         leftDrive.setPower(leftPower);
         rightDrive.setPower(rightPower);
 
         // rotate until turn is completed.
-        if (degrees < 0)
-        {
+        if (degrees < 0) {
             // On right turn we have to get off zero first.
-            while (opModeIsActive() && getAngle() == 0) {}
+            while (opModeIsActive() && getAngle() == 0) {
+            }
 
-            while (opModeIsActive() && getAngle() > degrees) {}
-        }
-        else    // left turn.
-            while (opModeIsActive() && getAngle() < degrees) {}
+            while (opModeIsActive() && getAngle() > degrees) {
+            }
+        } else    // left turn.
+            while (opModeIsActive() && getAngle() < degrees) {
+            }
 
         // turn the motors off.
         rightDrive.setPower(0);

@@ -109,7 +109,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
     final int ALLTASKSCOMPLETED = 100;
     final int ENCODERTEST = 101;
     final int TEST = 102;
-    final int RETRACT_LIFT_TIME = 12000;
+    final int RETRACT_LIFT_TIME = 9000;
 
     long tStart;
     int currentTask;
@@ -287,7 +287,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
                     break;
 
                 case GOLD_CASE_TWO:
-                    rotate(-50, 0.4);
+                    rotate(-60, 0.4);
                     currentTask = GO_STRAIGHT_GOLD_TWO;
                     tStart = System.currentTimeMillis();
                     break;
@@ -324,7 +324,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
                     } else {
                         leftDrive.setPower(0.0);
                         rightDrive.setPower(0.0);
-                        rotate(90, 0.4);
+                        rotate(50, 0.4);
                         currentTask = GOTO_DEPOT_TWO;
                         tStart = System.currentTimeMillis();
                     }
