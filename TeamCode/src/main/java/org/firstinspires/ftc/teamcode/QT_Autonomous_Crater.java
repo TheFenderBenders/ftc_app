@@ -94,10 +94,13 @@ public class QT_Autonomous_Crater extends LinearOpMode {
     final int GOTO_CRATER_ONE = 7;
     final int GOTO_CRATER_TWO = 8;
     final int GO_STRAIGHT_GOLD_TWO = 9;
+    final int RETRACT_LIFT = 10;
     final int ALLTASKSCOMPLETED = 100;
     final int ENCODERTEST = 101;
+    final int RETRACT_LIFT_TIME = 10000;
 
-   long tStart;
+
+    long tStart;
    int currentTask;
 
     static final double     COUNTS_PER_MOTOR_REV    = 1120 ;    // eg: TETRIX Motor Encoder
@@ -204,7 +207,7 @@ public class QT_Autonomous_Crater extends LinearOpMode {
                 break;
 
                 case LANDING_AND_UNLATCHING_FROM_LANDER:
-                    if (System.currentTimeMillis() - tStart < 8700) {
+                    if (System.currentTimeMillis() - tStart < RETRACT_LIFT_TIME) {
                         liftDrive.setPower(1.0);
                     } else {
                         tStart = System.currentTimeMillis();
@@ -249,37 +252,38 @@ public class QT_Autonomous_Crater extends LinearOpMode {
                     else {
                         leftDrive.setPower(0.0);
                         rightDrive.setPower(0.0);
-                        currentTask = ALLTASKSCOMPLETED;
+                        currentTask = RETRACT_LIFT;
                         tStart = System.currentTimeMillis();
                     }
                     break;
 
                 case GOLD_CASE_ONE:
-                    rotate(-30, 0.4);
+                    rotate(-20, 0.4);
                     currentTask = GOTO_CRATER_ONE;
                     tStart = System.currentTimeMillis();
                     break;
 
                 case GOLD_CASE_TWO:
-                    rotate(-70, 0.4);
+                    rotate(-55, 0.4);
                     currentTask = GO_STRAIGHT_GOLD_TWO;
                     tStart = System.currentTimeMillis();
                     break;
 
                 case GOTO_CRATER_ONE:
-                    if (System.currentTimeMillis() - tStart < 1500) {
+                    if (System.currentTimeMillis() - tStart < 3000) {
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
                     }
                     else {
                         leftDrive.setPower(-0.0);
                         rightDrive.setPower(-0.0);
-                        currentTask = ALLTASKSCOMPLETED;
+                        currentTask = RETRACT_LIFT;
+                        tStart = System.currentTimeMillis();
                     }
                     break;
 
                 case GO_STRAIGHT_GOLD_TWO:
-                    if (System.currentTimeMillis() - tStart < 1750) {
+                    if (System.currentTimeMillis() - tStart < 2500) {
                         // don't turn. Just go straight towards gold
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
@@ -287,10 +291,19 @@ public class QT_Autonomous_Crater extends LinearOpMode {
                     else {
                         leftDrive.setPower(0.0);
                         rightDrive.setPower(0.0);
-                        currentTask = ALLTASKSCOMPLETED;
+                        currentTask = RETRACT_LIFT;
                         tStart = System.currentTimeMillis();
                     }
+                    break;
 
+                case RETRACT_LIFT:
+                    if (System.currentTimeMillis() - tStart < RETRACT_LIFT_TIME) {
+                        liftDrive.setPower(-1.0);
+                    }
+                    else {
+                        liftDrive.setPower(0.0);
+                        currentTask = ALLTASKSCOMPLETED;
+                    }
                     break;
 
                 case ALLTASKSCOMPLETED:

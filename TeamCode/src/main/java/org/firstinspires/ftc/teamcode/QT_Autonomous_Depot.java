@@ -109,7 +109,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
     final int ALLTASKSCOMPLETED = 100;
     final int ENCODERTEST = 101;
     final int TEST = 102;
-    final int RETRACT_LIFT_TIME = 9000;
+    final int RETRACT_LIFT_TIME = 10000;
 
     long tStart;
     int currentTask;
@@ -281,7 +281,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
                     break;
 
                 case GOLD_CASE_ONE:
-                    rotate(-30, 0.4);
+                    rotate(-20, 0.4);
                     currentTask = GOTO_DEPOT_ONE;
                     tStart = System.currentTimeMillis();
                     break;
@@ -305,7 +305,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
                     break;
 
                 case GOTO_DEPOT_ONE:
-                    if (System.currentTimeMillis() - tStart < 3500) {
+                    if (System.currentTimeMillis() - tStart < 3000) {
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
                     } else {
@@ -317,7 +317,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
                     break;
 
                 case GO_STRAIGHT_GOLD_TWO:
-                    if (System.currentTimeMillis() - tStart < 1700) {
+                    if (System.currentTimeMillis() - tStart < 2000) {
                         // don't turn. Just go straight towards gold
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
@@ -333,7 +333,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
 
                 case GOTO_DEPOT_TWO:
 
-                    if (System.currentTimeMillis() - tStart < 2000) {
+                    if (System.currentTimeMillis() - tStart < 1800) {
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
                     } else {
@@ -349,7 +349,7 @@ public class QT_Autonomous_Depot extends LinearOpMode {
                     telemetry.update();
                     if (System.currentTimeMillis() - tStart < 2000) {
                         collectorDrive.setPower(0.79);
-                        if (System.currentTimeMillis() - tStart > 1000) {
+                        if (System.currentTimeMillis() - tStart > 1500) {
                             leftDrive.setPower(0.4);
                             rightDrive.setPower(0.4);
                         }
