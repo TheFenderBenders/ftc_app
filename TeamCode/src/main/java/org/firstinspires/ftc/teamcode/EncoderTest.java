@@ -29,10 +29,12 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -50,8 +52,7 @@ import com.qualcomm.robotcore.util.Range;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Encoder Test", group="Linear Opmode")
-@Disabled
+@Autonomous(name="Encoder Test", group="Linear Opmode")
 public class EncoderTest extends LinearOpMode {
 
     // Declare OpMode members.
@@ -80,20 +81,21 @@ public class EncoderTest extends LinearOpMode {
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
-        leftDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightDrive.setDirection(DcMotor.Direction.REVERSE);
+        leftDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightDrive.setDirection(DcMotor.Direction.FORWARD);
 
         leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-        leftDrive.setTargetPosition(1120);
-        rightDrive.setTargetPosition(1120);
+        leftDrive.setTargetPosition(-20 * (int)COUNTS_PER_INCH);
+        rightDrive.setTargetPosition(-20 * (int)COUNTS_PER_INCH);
 
         leftDrive.setPower(0.5);
         rightDrive.setPower(0.5);
 
         while (leftDrive.isBusy() && rightDrive.isBusy()) {
-            telemetry.addData("encoder-fwd", leftDrive.getCurrentPosition() + "  busy=" + leftDrive.isBusy());
+            telemetry.addData("left enc", leftDrive.getCurrentPosition() + "  busy=" + leftDrive.isBusy());
+            telemetry.addData("right enc", rightDrive.getCurrentPosition() + "  busy=" + rightDrive.isBusy());
             telemetry.update();
             idle();
         }
@@ -114,23 +116,12 @@ public class EncoderTest extends LinearOpMode {
         telemetry.addData("Mode", "running");
         telemetry.update();
 
-        leftDrive.setTargetPosition(-1120);
-
-        leftDrive.setPower(-0.25);
-        rightDrive.setPower(-0.25);
-
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
             // Setup a variable for each drive wheel to save power level for telemetry
             double leftPower;
             double rightPower;
-
-            while (leftDrive.isBusy()) {
-                telemetry.addData("encoder-fwd", leftDrive.getCurrentPosition() + "  busy=" + leftDrive.isBusy());
-                telemetry.update();
-                idle();
-            }
 
             leftDrive.setPower(0.0);
             rightDrive.setPower(0.0);
