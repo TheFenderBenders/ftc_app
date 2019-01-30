@@ -27,9 +27,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+package org.firstinspires.ftc.teamcode;
+
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -58,14 +61,16 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="SQT Autonomous Crater", group="Linear Opmode")
-public class SQT_Autonomous_Crater extends LinearOpMode {
+@Autonomous(name="QT Autonomous Depot ALL", group="Linear Opmode")
+public class QT_Autonomous_ALL extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
     private DcMotor liftDrive = null;
+    private CRServo collectorDrive = null;
+
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
     private static final String LABEL_SILVER_MINERAL = "Silver Mineral";
@@ -77,7 +82,7 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
     Orientation lastAngles = new Orientation();
     double globalAngle, power = .30, correction;
     boolean aButton, bButton, touched;
-
+    boolean depot;
     private int goldPos = -1; // position of gold mineral - 0 means G-S-S, 1 means S-G-S, and 2 means S-S-G
 
     //all tasks
@@ -87,31 +92,31 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
     final int GOLD_CASE_ZERO = 3;//when gold is on the left side
     final int GOLD_CASE_ONE = 4; //when gold is in the middle
     final int GOLD_CASE_TWO = 5;// when gold os on the right side
-    final int GOTO_CRATER_ZERO = 6;
-    final int GOTO_CRATER_ONE = 7;
-    final int GOTO_CRATER_TWO = 8;
+    final int GOTO_DEPOT_ZERO = 6;
+    final int GOTO_DEPOT_ONE = 7;
+    final int GOTO_DEPOT_TWO = 8;
     final int GO_STRAIGHT_GOLD_TWO = 9;
-    final int RETRACT_LIFT = 10;
-    final int BACKOUTZEROANDONE = 11;
-    final int BACKOUTTWO = 12;
+    final int CLAIM = 10;
+    final int RETRACT_LIFT = 11;
     final int ALLTASKSCOMPLETED = 100;
     final int ENCODERTEST = 101;
+    final int TEST = 102;
     final int RETRACT_LIFT_TIME = 10000;
-
 
     long tStart;
     int currentTask;
-
+    boolean timeReset;
+    boolean moveByTimeFinish;
     static final double COUNTS_PER_MOTOR_REV = 1120;    // eg: TETRIX Motor Encoder
     static final double DRIVE_GEAR_REDUCTION = 2.0;     // This is < 1.0 if geared UP
     static final double WHEEL_DIAMETER_INCHES = 4.0;     // For figuring circumference
     static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
 
-
-    static final int CUTTOFFPOINT = 500;
-
     @Override
     public void runOpMode() {
+
+        telemetry.addData("Configuring IMU...", "Please wait.");
+        telemetry.update();
 
         initVuforia();
 
@@ -131,10 +136,13 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
         liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
         leftDrive.setDirection(DcMotor.Direction.REVERSE);
-        liftDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightDrive.setDirection(DcMotor.Direction.FORWARD);
+        rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        liftDrive.setDirection(DcMotor.Direction.FORWARD);
         leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        collectorDrive = hardwareMap.get(CRServo.class, "collector_drive");
 
         telemetry.addData("Calibrating ", "IMU");
         telemetry.update();
@@ -176,20 +184,35 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
         telemetry.addData("Mode", "waiting for start");
         telemetry.update();
 
-        // Wait for the game to start (driver presses PLAY)
+
+
         if (tfod != null) {
             List<Recognition> updatedRecognitionsInit = tfod.getUpdatedRecognitions();
             if (updatedRecognitionsInit != null) {
-                if (updatedRecognitionsInit.size() > 0) {
+                int initSize = updatedRecognitionsInit.size();
+                if (initSize > 0) {
                     telemetry.addData("# Objects Detected", updatedRecognitionsInit.size());
+                    telemetry.update();
+                    if(initSize == 2){
+                        depot = true;
+                    }
+                    else if(initSize>2){
+                        depot = false;
+                    }
+                    else{
+                        telemetry.addLine("ERROR: CANNOT TELL WHETHER DEPOT OR CRATER. CAUSE: NOT SEEING ANY OBJECTS(INSIDE FOUND OBJECTS)");
+                        telemetry.update();
+                    }
+                }
+                else{
+                    telemetry.addLine("ERROR: CANNOT TELL WHETHER DEPOT OR CRATER. CAUSE: NOT SEEING ANY OBJECTS(OUTSIDE FOUND OBJECTS)");
                     telemetry.update();
                 }
 
             }
         }
 
-
-
+        // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
         currentTask = SAMPLE_RECOGNITION;
@@ -205,17 +228,14 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
                 case SAMPLE_RECOGNITION:
                     goldPos = findGoldPosition();
                     if (goldPos != -1) {
-//                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
                         currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
-
+                        tStart = System.currentTimeMillis();
+                    } else if (System.currentTimeMillis() - tStart > 6000) { // gold not found for 6 seconds...move on!
+                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
+                        goldPos = 1; // assume gold is in the middle and move on
                         tStart = System.currentTimeMillis();
                     }
-                    else if (System.currentTimeMillis() - tStart > 6000) { // gold not found for 6 seconds...move on and go straight to the depot
-                        currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
-                        goldPos = 1;
-                        tStart = System.currentTimeMillis();
-                    }
-                break;
+                    break;
 
                 case LANDING_AND_UNLATCHING_FROM_LANDER:
                     if (System.currentTimeMillis() - tStart < RETRACT_LIFT_TIME) {
@@ -235,8 +255,7 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
                     if (System.currentTimeMillis() - tStart < 250) {
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
-                    }
-                    else {
+                    } else {
                         leftDrive.setPower(0.0);
                         rightDrive.setPower(0.0);
                         tStart = System.currentTimeMillis();
@@ -255,92 +274,113 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
                     break;
 
                 case GOLD_CASE_ZERO:
-                    if (System.currentTimeMillis() - tStart < 1750) {
-                        // don't turn. Just go straight towards gold
+                    if (System.currentTimeMillis() - tStart < 2500) {
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
-                    }
-                    else {
+                    } else {
                         leftDrive.setPower(0.0);
                         rightDrive.setPower(0.0);
-                        currentTask = RETRACT_LIFT;
+                        rotate(-60, 0.4);
+                        currentTask = GOTO_DEPOT_ZERO;
                         tStart = System.currentTimeMillis();
                     }
                     break;
 
                 case GOLD_CASE_ONE:
                     rotate(-20, 0.4);
-                    currentTask = GOTO_CRATER_ONE;
+                    currentTask = GOTO_DEPOT_ONE;
                     tStart = System.currentTimeMillis();
                     break;
 
                 case GOLD_CASE_TWO:
-                    rotate(-55, 0.4);
+                    rotate(-60, 0.4);
                     currentTask = GO_STRAIGHT_GOLD_TWO;
                     tStart = System.currentTimeMillis();
                     break;
 
-                case GOTO_CRATER_ONE:
+                case GOTO_DEPOT_ZERO:
+                    if (System.currentTimeMillis() - tStart < 2000) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    } else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        currentTask = CLAIM;
+                        tStart = System.currentTimeMillis();
+                    }
+                    break;
+
+                case GOTO_DEPOT_ONE:
                     if (System.currentTimeMillis() - tStart < 3000) {
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
-                    }
-                    else {
-                        leftDrive.setPower(-0.0);
-                        rightDrive.setPower(-0.0);
-                        currentTask = RETRACT_LIFT;
+                    } else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        currentTask = CLAIM;
                         tStart = System.currentTimeMillis();
                     }
                     break;
 
                 case GO_STRAIGHT_GOLD_TWO:
-                    if (System.currentTimeMillis() - tStart < 2500) {
+                    if (System.currentTimeMillis() - tStart < 2000) {
                         // don't turn. Just go straight towards gold
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
-                    }
-                    else {
+                    } else {
                         leftDrive.setPower(0.0);
                         rightDrive.setPower(0.0);
-                        currentTask = RETRACT_LIFT;
+                        rotate(50, 0.4);
+                        currentTask = GOTO_DEPOT_TWO;
+                        tStart = System.currentTimeMillis();
+                    }
+
+                    break;
+
+                case GOTO_DEPOT_TWO:
+
+                    if (System.currentTimeMillis() - tStart < 1800) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    } else {
+                        leftDrive.setPower(-0.0);
+                        rightDrive.setPower(-0.0);
+                        currentTask = CLAIM;
                         tStart = System.currentTimeMillis();
                     }
                     break;
 
+                case CLAIM:
+                    if(depot) {
+                        telemetry.addLine("In Claim");
+                        telemetry.update();
+                        if (System.currentTimeMillis() - tStart < 2000) {
+                            collectorDrive.setPower(0.79);
+                            if (System.currentTimeMillis() - tStart > 1500) {
+                                leftDrive.setPower(0.4);
+                                rightDrive.setPower(0.4);
+                            }
+                        } else {
+                            collectorDrive.setPower(0.0);
+                            leftDrive.setPower(0.0);
+                            rightDrive.setPower(0.0);
+                            currentTask = RETRACT_LIFT;
+                            tStart = System.currentTimeMillis();
+                        }
+                    }else{
+                        currentTask = ALLTASKSCOMPLETED;
+                    }
+                    break;
+
                 case RETRACT_LIFT:
-                    if (System.currentTimeMillis() - tStart < 800) {
+                    if (System.currentTimeMillis() - tStart < RETRACT_LIFT_TIME) {
                         liftDrive.setPower(-1.0);
                     }
                     else {
                         liftDrive.setPower(0.0);
-                       switch (goldPos){
-                           case 0:
-                              currentTask = BACKOUTZEROANDONE;
-                               tStart = System.currentTimeMillis();
-                               break;
-                           case 1:
-                               currentTask = BACKOUTZEROANDONE;
-                               tStart = System.currentTimeMillis();
-                               break;
-                           case 2:
-                               break;
-
-                       }
-
+                        currentTask = ALLTASKSCOMPLETED;
                     }
                     break;
-
-                case BACKOUTZEROANDONE:
-                    if(System.currentTimeMillis()-tStart<2000) {
-                        leftDrive.setPower(1.0);
-                        rightDrive.setPower(1.0);
-                    }
-                    else{
-                        leftDrive.setPower(0.0);
-                        rightDrive.setPower(0.0);
-                    currentTask = ALLTASKSCOMPLETED;
-                    }
-                        break;
 
                 case ALLTASKSCOMPLETED:
                     leftDrive.setPower(0.0);
@@ -350,12 +390,12 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
                     break;
 
                 case ENCODERTEST:
-                    if(!encoderTest_defineMotorTypeOnce) {
+                    if (!encoderTest_defineMotorTypeOnce) {
                         GoStraight(24);
                         encoderTest_defineMotorTypeOnce = true;
                     }
 
-                        telemetry.addLine("done");
+                    telemetry.addLine("done");
 
 
                     break;
@@ -386,18 +426,13 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
 
                     for (Recognition recognition : updatedRecognitions) {
                         int left = (int) recognition.getLeft();
-                        int top = (int) recognition.getTop();
-                        telemetry.addData("top =  ", top);
-
-//                        if (top > CUTTOFFPOINT) {
-                            if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
-                                goldMineralX = (int) recognition.getLeft();
-                            } else if (silverMineral1X == -1) {
-                                silverMineral1X = (int) recognition.getLeft();
-                            } else {
-                                silverMineral2X = (int) recognition.getLeft();
-                            }
-  //                      }
+                        if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                            goldMineralX = (int) recognition.getLeft();
+                        } else if (silverMineral1X == -1) {
+                            silverMineral1X = (int) recognition.getLeft();
+                        } else {
+                            silverMineral2X = (int) recognition.getLeft();
+                        }
                     }
                     if (silverMineral2X == -1) {
                         if (goldMineralX > silverMineral1X) {
@@ -423,7 +458,6 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
         }
         return gPos;
     }
-
 
 
     /**
@@ -456,8 +490,7 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
     /**
      * Resets the cumulative angle tracking to zero.
      */
-    private void resetAngle()
-    {
+    private void resetAngle() {
         lastAngles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         globalAngle = 0;
@@ -465,10 +498,10 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
 
     /**
      * Get current cumulative angle rotation from last reset.
+     *
      * @return Angle in degrees. + = left, - = right.
      */
-    private double getAngle()
-    {
+    private double getAngle() {
         // We experimentally determined the Z axis is the axis we want to use for heading angle.
         // We have to process the angle because the imu works in euler angles so the Z axis is
         // returned as 0 to +180 or 0 to -180 rolling back to -179 or +179 when rotation passes
@@ -492,10 +525,10 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
 
     /**
      * See if we are moving in a straight line and if not return a power correction value.
+     *
      * @return Power adjustment, + is adjust left - is adjust right.
      */
-    private double checkDirection()
-    {
+    private double checkDirection() {
         // The gain value determines how sensitive the correction is to direction changes.
         // You will have to experiment with your robot to get small smooth direction changes
         // to stay on a straight line.
@@ -515,6 +548,7 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
 
     /**
      * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
+     *
      * @param degrees Degrees to turn, + is left - is right
      */
     private void rotate(int degrees, double power) {
@@ -567,7 +601,7 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
         // set right motor to run without regard to an encoder.
         rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        int newTarget = leftDrive.getCurrentPosition() - (int)(distanceInInches * COUNTS_PER_INCH);
+        int newTarget = leftDrive.getCurrentPosition() - (int) (distanceInInches * COUNTS_PER_INCH);
 
         leftDrive.setTargetPosition(newTarget);
         // set left motor to run to target encoder position and stop with brakes on.

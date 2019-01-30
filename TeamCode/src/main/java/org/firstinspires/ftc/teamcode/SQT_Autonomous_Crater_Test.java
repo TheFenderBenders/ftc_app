@@ -26,7 +26,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -58,8 +58,8 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="SQT Autonomous Crater", group="Linear Opmode")
-public class SQT_Autonomous_Crater extends LinearOpMode {
+@Autonomous(name="SQT Autonomous Crater Test", group="Linear Opmode")
+public class SQT_Autonomous_Crater_Test extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -77,6 +77,7 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
     Orientation lastAngles = new Orientation();
     double globalAngle, power = .30, correction;
     boolean aButton, bButton, touched;
+    boolean depot;
 
     private int goldPos = -1; // position of gold mineral - 0 means G-S-S, 1 means S-G-S, and 2 means S-S-G
 
@@ -98,7 +99,14 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
     final int ENCODERTEST = 101;
     final int RETRACT_LIFT_TIME = 10000;
 
+    final int CRATER_SIDE = 13;
+    final int DEPOT_SIDE = 14;
+    final int CASE_ONE = 15;
+    final int CASE_ONE_GO_STRAIGHT = 16;
 
+/*
+
+ */
     long tStart;
     int currentTask;
 
@@ -180,8 +188,23 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
         if (tfod != null) {
             List<Recognition> updatedRecognitionsInit = tfod.getUpdatedRecognitions();
             if (updatedRecognitionsInit != null) {
-                if (updatedRecognitionsInit.size() > 0) {
+                int initSize = updatedRecognitionsInit.size();
+                if (initSize > 0) {
                     telemetry.addData("# Objects Detected", updatedRecognitionsInit.size());
+                    telemetry.update();
+                    if(initSize == 2){
+                        depot = true;
+                    }
+                    else if(initSize>2){
+                        depot = false;
+                    }
+                    else{
+                        telemetry.addLine("ERROR: CANNOT TELL WHETHER DEPOT OR CRATER. CAUSE: NOT SEEING ANY OBJECTS(INSIDE FOUND OBJECTS)");
+                        telemetry.update();
+                    }
+                }
+                else{
+                    telemetry.addLine("ERROR: CANNOT TELL WHETHER DEPOT OR CRATER. CAUSE: NOT SEEING ANY OBJECTS(OUTSIDE FOUND OBJECTS)");
                     telemetry.update();
                 }
 
@@ -200,6 +223,75 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
 
             double leftPower = 0.0;
             double rightPower = 0.0;
+
+
+            switch (currentTask){
+                case SAMPLE_RECOGNITION:
+                    goldPos = findGoldPosition();
+                    if(depot){
+                        currentTask = DEPOT_SIDE;
+                    }
+                    else{
+                        currentTask = CRATER_SIDE;
+                    }
+                    break;
+
+
+
+                case DEPOT_SIDE:
+                    if(goldPos == 1){
+                        currentTask = CASE_ONE;
+                    }
+                    break;
+
+
+
+                case CRATER_SIDE:
+                    if(goldPos == 1){
+                        currentTask = CASE_ONE;
+                    }
+                    break;
+
+                case CASE_ONE:
+                    rotate(-20, 0.4);
+                    currentTask = CASE_ONE_GO_STRAIGHT;
+                    break;
+
+                case CASE_ONE_GO_STRAIGHT:
+                    break;
+/*
+crater
+if (System.currentTimeMillis() - tStart < 3000) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    }
+                    after this the sample case completes
+
+ depot
+  if (System.currentTimeMillis() - tStart < 3000) {
+                        leftDrive.setPower(-0.5);
+                        rightDrive.setPower(-0.5);
+                    }
+                    after this claim
+
+ */
+
+
+
+
+
+            }
+
+
+
+
+
+
+
+
+
+
+//OLD CODE down NEW CODE ^
 
             switch (currentTask) {
                 case SAMPLE_RECOGNITION:

@@ -61,8 +61,8 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="QT Autonomous Crater", group="Linear Opmode")
-public class QT_Autonomous_Crater extends LinearOpMode {
+@Autonomous(name="SQT Autonomous Crater", group="Linear Opmode")
+public class SQT_Autonomous_Crater extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
