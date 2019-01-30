@@ -548,7 +548,7 @@ public class SQT_Autonomous_Crater extends LinearOpMode {
             telemetry.update();
             idle();
         }
-
+//
         leftDrive.setPower(0.0);
         rightDrive.setPower(0.0);
 
