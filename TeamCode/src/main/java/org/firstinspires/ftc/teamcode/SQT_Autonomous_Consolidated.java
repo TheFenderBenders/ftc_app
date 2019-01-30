@@ -54,15 +54,16 @@ import java.util.List;
  * of the FTC Driver Station. When an selection is made from the menu, the corresponding OpMode
  * class is instantiated on the Robot Controller and executed.
  *
- * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
+ *
+ * This particular OpMode just executes a ba+sic Tank Drive Teleop for a two wheeled robot
  * It includes all the skeletal structure that all linear OpModes contain.
  *
  * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="QT Autonomous Depot ALL", group="Linear Opmode")
-public class QT_Autonomous_ALL extends LinearOpMode {
+@Autonomous(name="SQT Autonomous Consolidated", group="Linear Opmode")
+public class SQT_Autonomous_Consolidated extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -81,8 +82,6 @@ public class QT_Autonomous_ALL extends LinearOpMode {
     BNO055IMU imu;
     Orientation lastAngles = new Orientation();
     double globalAngle, power = .30, correction;
-    boolean aButton, bButton, touched;
-    boolean depot;
     private int goldPos = -1; // position of gold mineral - 0 means G-S-S, 1 means S-G-S, and 2 means S-S-G
 
     //all tasks
@@ -100,13 +99,15 @@ public class QT_Autonomous_ALL extends LinearOpMode {
     final int RETRACT_LIFT = 11;
     final int ALLTASKSCOMPLETED = 100;
     final int ENCODERTEST = 101;
-    final int TEST = 102;
     final int RETRACT_LIFT_TIME = 10000;
+
+    final int DEPOT_SIDE = 1;
+    final int CRATER_SIDE = 2;
+    int startSide = DEPOT_SIDE;
+    final int CUTOFF_POINT = 600;
 
     long tStart;
     int currentTask;
-    boolean timeReset;
-    boolean moveByTimeFinish;
     static final double COUNTS_PER_MOTOR_REV = 1120;    // eg: TETRIX Motor Encoder
     static final double DRIVE_GEAR_REDUCTION = 2.0;     // This is < 1.0 if geared UP
     static final double WHEEL_DIAMETER_INCHES = 4.0;     // For figuring circumference
@@ -184,31 +185,30 @@ public class QT_Autonomous_ALL extends LinearOpMode {
         telemetry.addData("Mode", "waiting for start");
         telemetry.update();
 
-
-
         if (tfod != null) {
             List<Recognition> updatedRecognitionsInit = tfod.getUpdatedRecognitions();
             if (updatedRecognitionsInit != null) {
-                int initSize = updatedRecognitionsInit.size();
-                if (initSize > 0) {
+                int numMin = updatedRecognitionsInit.size();
+                if (numMin > 0) {
                     telemetry.addData("# Objects Detected", updatedRecognitionsInit.size());
-                    telemetry.update();
-                    if(initSize == 2){
-                        depot = true;
+                    if(numMin == 2){
+                        startSide = DEPOT_SIDE;
+                        telemetry.addLine("DEPOT side");
                     }
-                    else if(initSize>2){
-                        depot = false;
+                    else if(numMin > 2){
+                        startSide = CRATER_SIDE;
+                        telemetry.addLine("CRATER side");
                     }
                     else{
-                        telemetry.addLine("ERROR: CANNOT TELL WHETHER DEPOT OR CRATER. CAUSE: NOT SEEING ANY OBJECTS(INSIDE FOUND OBJECTS)");
+                        telemetry.addLine("ERROR: CANNOT TELL WHETHER DEPOT OR CRATER. DONT SEE TWO OBJECTS1");
                         telemetry.update();
                     }
                 }
                 else{
-                    telemetry.addLine("ERROR: CANNOT TELL WHETHER DEPOT OR CRATER. CAUSE: NOT SEEING ANY OBJECTS(OUTSIDE FOUND OBJECTS)");
+                    telemetry.addLine("ERROR: CANNOT TELL WHETHER DEPOT OR CRATER. DONT SEE ANY OBJECTS");
                     telemetry.update();
                 }
-
+                telemetry.update();
             }
         }
 
@@ -351,7 +351,7 @@ public class QT_Autonomous_ALL extends LinearOpMode {
                     break;
 
                 case CLAIM:
-                    if(depot) {
+                    if(startSide == DEPOT_SIDE) {
                         telemetry.addLine("In Claim");
                         telemetry.update();
                         if (System.currentTimeMillis() - tStart < 2000) {
@@ -426,12 +426,25 @@ public class QT_Autonomous_ALL extends LinearOpMode {
 
                     for (Recognition recognition : updatedRecognitions) {
                         int left = (int) recognition.getLeft();
-                        if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
-                            goldMineralX = (int) recognition.getLeft();
-                        } else if (silverMineral1X == -1) {
-                            silverMineral1X = (int) recognition.getLeft();
-                        } else {
-                            silverMineral2X = (int) recognition.getLeft();
+                        int top = (int) recognition.getTop();
+                        if (startSide == CRATER_SIDE) {
+                            if (top > CUTOFF_POINT)
+                                if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                                    goldMineralX = (int) recognition.getLeft();
+                                } else if (silverMineral1X == -1) {
+                                    silverMineral1X = (int) recognition.getLeft();
+                                } else {
+                                    silverMineral2X = (int) recognition.getLeft();
+                                }
+                        }
+                        else{
+                            if (recognition.getLabel().equals(LABEL_GOLD_MINERAL)) {
+                                goldMineralX = (int) recognition.getLeft();
+                            } else if (silverMineral1X == -1) {
+                                silverMineral1X = (int) recognition.getLeft();
+                            } else {
+                                silverMineral2X = (int) recognition.getLeft();
+                            }
                         }
                     }
                     if (silverMineral2X == -1) {
