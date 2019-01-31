@@ -239,7 +239,6 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
 
                 case LANDING_AND_UNLATCHING_FROM_LANDER:
 
-/*  replacing with logic to use the IMU instead of time to figure out when to stop the lift
                     if (System.currentTimeMillis() - tStart < RETRACT_LIFT_TIME) {
                         liftDrive.setPower(1.0);
                     } else {
@@ -250,8 +249,10 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                         rotate(20, 0.4);
                         tStart = System.currentTimeMillis();
                         currentTask = BACKUP;
-*/
+                    }
+/*
                     liftDrive.setPower(1.0);
+
                     float f = imu.getAngularOrientation().firstAngle;
                     sleep (500);
                     if (imu.getAngularOrientation().firstAngle == f) { // no angular movement around z axis for 500ms. Reached the ground.
@@ -261,7 +262,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                         rotate(20, 0.4);
                         tStart = System.currentTimeMillis();
                         currentTask = BACKUP;
-                    }
+*/
                     break;
 
                 case BACKUP:
