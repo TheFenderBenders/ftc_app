@@ -15,6 +15,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 
+import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
@@ -23,7 +24,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 
 @Autonomous(name="Gyro Test", group="Exercises")
-@Disabled
 public class IMU extends LinearOpMode
 {
     DcMotor                 leftMotor;
@@ -96,6 +96,7 @@ public class IMU extends LinearOpMode
             idle();
         }
 
+
         telemetry.addData("Mode", "waiting for start");
         telemetry.addData("imu calib status", imu.getCalibrationStatus().toString());
         telemetry.update();
@@ -113,43 +114,16 @@ public class IMU extends LinearOpMode
 
         while (opModeIsActive())
         {
-            // Use gyro to drive in a straight line.
-            correction = checkDirection();
+//            telemetry.addData("Ang orientation-Z:", imu.getAngularOrientation().firstAngle);
+//            telemetry.update();
 
-            telemetry.addData("1 imu heading", lastAngles.firstAngle);
-            telemetry.addData("2 global heading", globalAngle);
-            telemetry.addData("3 correction", correction);
-            telemetry.update();
-
-//            leftMotor.setPower(-power + correction);
-//            rightMotor.setPower(-power);
-
-            // We record the sensor values because we will test them in more than
-            // one place with time passing between those places. See the lesson on
-            // Timing Considerations to know why.
-
-            aButton = gamepad1.a;
-            bButton = gamepad1.b;
-            touched = false;
-
-            if (aButton || bButton)
-            {
-                // backup.
-                leftMotor.setPower(power);
-                rightMotor.setPower(power);
-
-                sleep(500);
-
-                // stop.
-                leftMotor.setPower(0);
-                rightMotor.setPower(0);
-
-                // turn 90 degrees right.
-                if (aButton) rotate(-90, power);
-
-                // turn 90 degrees left.
-                if (bButton) rotate(90, power);
+            float f = imu.getAngularOrientation().firstAngle;
+            sleep(1000);
+            if (imu.getAngularOrientation().firstAngle == f) {
+                telemetry.addLine("stabilized");
+                telemetry.update();
             }
+
         }
 
         // turn the motors off.
