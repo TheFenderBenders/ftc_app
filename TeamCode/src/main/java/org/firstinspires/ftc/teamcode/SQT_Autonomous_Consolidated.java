@@ -325,7 +325,6 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                     break;
 
                 case GOTO_DEPOT_TWO:
-<<<<<<< HEAD
 
                     if (System.currentTimeMillis() - tStart < 1800) {
                         leftDrive.setPower(-0.5);
@@ -336,19 +335,17 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                         tStart = System.currentTimeMillis();
                         currentTask = CLAIM;
                     }
-=======
                     telemetry.addLine("currentTask: GOTO_DEPOT_TWO");
                     telemetry.update();
                     tStart = System.currentTimeMillis();
                     goStraight(-30,1.0);
                     currentTask = CLAIM;
->>>>>>> 49b33294acd3a05ff641d48f7e4c590f46ff3cd1
                     break;
 
                 case CLAIM:
                     telemetry.addLine("currentTask: CLAIM");
                     telemetry.update();
-                    if (System.currentTimeMillis() - tStart < 1500) {
+                    if (System.currentTimeMillis() - tStart < 2000) {
                         collectorDrive.setPower(0.7);
                         if (System.currentTimeMillis() - tStart < 1500) {
                             leftDrive.setPower(0.4);
