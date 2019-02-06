@@ -86,7 +86,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
     final int RETRACT_LIFT_AND_BACK_OUT = 11;
     final int ALLTASKSCOMPLETED = 100;
 
-    int RETRACT_LIFT_TIME = 10000;
+    int RETRACT_LIFT_TIME = 6000;
     final int CUTOFF_POINT = 600;
 
     final int DEPOT_SIDE = 1;
