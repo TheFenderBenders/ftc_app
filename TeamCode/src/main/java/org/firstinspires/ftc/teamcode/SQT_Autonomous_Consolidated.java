@@ -223,7 +223,9 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                     if (goldPos != -1) {
                         currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
                         tStart = System.currentTimeMillis();
-                    } else if (System.currentTimeMillis() - tStart > 6000) { // gold not found for 6 seconds...move on!
+                    } else if (System.currentTimeMillis() - tStart > 6000) {
+                        telemetry.addLine("ERROR: CANNOT TELL MINERAL POSITION. GOING TO UNLATCH BUT NOT SAMPLE OR CLAIM");
+                        // gold not found for 6 seconds...move on!
                         currentTask = LANDING_AND_UNLATCHING_FROM_LANDER;
                         goldPos = 1; // assume gold is in the middle and move on
                         tStart = System.currentTimeMillis();
@@ -236,10 +238,9 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                     if (System.currentTimeMillis() - tStart < RETRACT_LIFT_TIME) {
                         liftDrive.setPower(1.0);
                     } else {
-                        tStart = System.currentTimeMillis();
                         liftDrive.setPower(0.0);
                         // unlatch
-                        rotate(20, 0.6);
+                        rotate(20, 0.5);
                         tStart = System.currentTimeMillis();
                         currentTask = BACKUP;
                     }
@@ -285,6 +286,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                     telemetry.addLine("currentTask: GOLD_CASE_ONE");
                     telemetry.update();
                     rotate(-25, 0.5);
+
                     currentTask = GOTO_DEPOT_ONE;
                     tStart = System.currentTimeMillis();
                     break;
@@ -293,7 +295,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                     telemetry.addLine("currentTask: GOLD_CASE_TWO");
                     telemetry.update();
                     rotate(-60, 0.5);
-                    goStraight(-35, 0.7);
+                    goStraight(-35, 1.0);
                     if(startSide == CRATER_SIDE)
                         currentTask = ALLTASKSCOMPLETED;
                     else {
@@ -330,8 +332,8 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
                     } else {
-                        leftDrive.setPower(-0.0);
-                        rightDrive.setPower(-0.0);
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
                         tStart = System.currentTimeMillis();
                         currentTask = CLAIM;
                     }
@@ -348,8 +350,8 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                     if (System.currentTimeMillis() - tStart < 2000) {
                         collectorDrive.setPower(0.7);
                         if (System.currentTimeMillis() - tStart < 1500) {
-                            leftDrive.setPower(0.4);
-                            rightDrive.setPower(0.4);
+                            leftDrive.setPower(1.0);
+                            rightDrive.setPower(1.0);
                         }
                     } else {
                         collectorDrive.setPower(0.0);

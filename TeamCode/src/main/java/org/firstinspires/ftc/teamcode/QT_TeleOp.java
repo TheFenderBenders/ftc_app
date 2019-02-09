@@ -110,8 +110,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
             waitForStart();
             runtime.reset();
 
-            // run until the end of the match (driver presses STOP)
-            while (opModeIsActive()) {
+            // run until the end of the match (driver presses STOP) v
                 // Setup a variable for each drive wheel to save power level for telemetry
                 double linearslide = 0.0;
                 double arm = 0.0;
@@ -197,4 +196,4 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
                 telemetry.update();
             }
         }
-    }
+
