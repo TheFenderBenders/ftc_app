@@ -31,6 +31,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -102,7 +103,7 @@ public class Lift_Lower extends LinearOpMode {
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
-    private DcMotor liftDrive = null;
+    private CRServo liftDrive = null;
 
     boolean timed = false;
 
@@ -116,7 +117,7 @@ public class Lift_Lower extends LinearOpMode {
         // step (using the FTC Robot Controller app on the phone).
         leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
-        liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
+        liftDrive = hardwareMap.get(CRServo.class, "lift_drive");
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
@@ -128,8 +129,8 @@ public class Lift_Lower extends LinearOpMode {
         double leftPower;
         double rightPower;
         if (!timed) tStart = System.currentTimeMillis();
-        if (tStart - System.currentTimeMillis() < 8700) {
-            liftDrive.setPower(-1.0);
+        if (tStart - System.currentTimeMillis() < 5) {
+            liftDrive.setPower(1.0);
         } else {
             liftDrive.setPower(0.0);
             timed= true;

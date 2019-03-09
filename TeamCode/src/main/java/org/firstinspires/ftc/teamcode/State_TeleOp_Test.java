@@ -37,51 +37,28 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-/**
- * {@link SensorREV2mDistance} illustrates how to use the REV Robotics
- * Time-of-Flight Range Sensor.
- *
- * The op mode assumes that the range sensor is configured with a name of "sensor_range".
- *
- * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
- * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
- *
- * @see <a href="http://revrobotics.com">REV Robotics Web Page</a>
- */
-
-/**
- * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
- * the autonomous or the teleop period of an FTC match. The names of OpModes appear on the menu
- * of the FTC Driver Station. When an selection is made from the menu, the corresponding OpMode
- * class is instantiated on the Robot Controller and executed.
- *
- * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
- * It includes all the skeletal structure that all linear OpModes contain.
- *
- * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
- * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
- */
-
-@TeleOp(name="QT Teleop(dont use this)", group="Linear Opmode")
-public  class QT_TeleOp_Test extends LinearOpMode {
+@TeleOp(name="State Teleop Test", group="Linear Opmode")
+public  class State_TeleOp_Test extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
+    private DcMotor armDrive = null;
+    private DcMotor linearDrive = null;
+    private DigitalChannel digitalTouch = null;
+    private CRServo collectorDrive = null;
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
-    private DcMotor liftDrive = null;
-    private DcMotor armDrive = null;
-    private CRServo linearDrive = null;
-    private CRServo collectorDrive = null;
-    double leftPower = 0.0;
-    double rightPower = 0.0;
-    boolean forward = true;
-    long reverseTimer;
-    boolean rev;
-   //  int RAMPUP = 8;
+    private CRServo liftDrive = null;
+    long tStart;
+    static final int COUNTS_PER_MOTOR_REV = 1120;    // eg: TETRIX Motor Encoder
+    static final double DRIVE_GEAR_REDUCTION = 25.0;     // This is < 1.0 if geared UP
+    static final double WHEEL_DIAMETER_INCHES = 4.0;     // For figuring circumference
+    static final double COUNTS_PER_INCH = COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION ;
+    boolean firstUse = true;
 
     @Override
     public void runOpMode() {
@@ -91,53 +68,76 @@ public  class QT_TeleOp_Test extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
-        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
-        liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
         armDrive = hardwareMap.get(DcMotor.class, "arm_drive");
-        linearDrive = hardwareMap.get(CRServo.class, "linear_drive");
+        armDrive.setDirection(DcMotor.Direction.REVERSE);
+//        armDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        armDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        armDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        linearDrive = hardwareMap.get(DcMotor.class, "linear_drive");
+        linearDrive.setDirection(DcMotor.Direction.FORWARD);
+        linearDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        linearDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        linearDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
         collectorDrive = hardwareMap.get(CRServo.class, "collector_drive");
+//        digitalTouch = hardwareMap.get(DigitalChannel.class, "limit_switch");
+//        digitalTouch.setMode(DigitalChannel.Mode.INPUT);
 
-        // Most robots need the motor on one side to be reversed to drive forward
-        // Reverse the motor that runs backwards when connected directly to the battery
-        leftDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightDrive.setDirection(DcMotor.Direction.FORWARD);
-        liftDrive.setDirection(DcMotor.Direction.FORWARD);
+        liftDrive = hardwareMap.get(CRServo.class,"lift_drive");
+        liftDrive.setDirection(DcMotorSimple.Direction.FORWARD);
 
-        reverseTimer = System.currentTimeMillis();
 
+        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
+        leftDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
+
+        telemetry.addData("Mode", "waiting for start");
+        telemetry.update();
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
 
+        boolean stopArm = false;
+        tStart = 0;
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
+
             // Setup a variable for each drive wheel to save power level for telemetry
-            double linearslide = 0.0;
-            double arm = 0.0;
-            double collector = 0.0;
+            double armPower = 0.0;
+            double linearPower = 0.0;
+            double collectorPower = 0.0;
+            double leftPower = 0.0;
+            double rightPower = 0.0;
+            double liftPower = 0.0;
+            /*
+            if ((gamepad1.a) && (System.currentTimeMillis() - tStart > 500)) {
+                goDown(-0.4);
+                tStart = System.currentTimeMillis();
 
-           /* if (gamepad1.left_stick_y < 0 ){ // meaning robot has to move fwd
-                leftPower -= (gamepad1.left_stick_y + leftPower) / RAMPUP;
-            }
-            else if(gamepad1.left_stick_y > 0){ // meaning robot has to move backward
-                leftPower += (gamepad1.left_stick_y - leftPower) / RAMPUP;
-            }
-            else{
-                leftPower = 0.0;
-            }
-
-            if (gamepad1.right_stick_y < 0 ){ // meaning robot has to move fwd
-                rightPower -= (gamepad1.right_stick_y + rightPower) / RAMPUP;
-            }
-            else if(gamepad1.right_stick_y > 0){ // meaning robot has to move backward
-                rightPower += (gamepad1.right_stick_y - rightPower) / RAMPUP;
-            }
-            else{
-                rightPower = 0.0;
             }
 */
 
+
+
+
+            if (gamepad2.a) {
+                goDown(-0.4);
+            }
+            if (gamepad2.y) {
+                goUp(0.4);
+
+            }
+
+
+            /*            if (gamepad1.right_bumper) { // go up
+                goStraight(COUNTS_PER_MOTOR_REV, 0.6);
+            }
+            if (gamepad1.left_bumper) { // go down
+                goStraight(-COUNTS_PER_MOTOR_REV, 0.6);
+            }
+*/
 
             if ((gamepad1.left_stick_y != 0.0) || (gamepad1.right_stick_y != 0.0)) {
                 leftPower = Range.clip(-gamepad1.left_stick_y, -0.9, 0.9);
@@ -148,94 +148,93 @@ public  class QT_TeleOp_Test extends LinearOpMode {
                 rightPower = 0.0;
             }
 
-            leftDrive.setPower(leftPower);
-            rightDrive.setPower(rightPower);
 
-            if(gamepad2.right_bumper) {
-                liftDrive.setPower(1.0);
+            if (gamepad2.right_stick_y != 0.0) {
+                armDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                armPower = Range.clip(gamepad2.right_stick_y, -0.7, 0.7);
             }
-            else if(gamepad2.left_bumper) {
-                liftDrive.setPower(-1.0);
-            }
-            else {
-                liftDrive.setPower(0.0);
-            }
-
-            if(gamepad2.left_trigger>0.0){
-                linearslide = (0.79*gamepad2.left_trigger);
-            }
-            else if(gamepad2.right_trigger>0.0) {
-                linearslide = (-0.79 * gamepad2.right_trigger);
+            else if (gamepad2.left_stick_y !=0.0){
+                armDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                armPower = Range.clip(gamepad2.left_stick_y, -0.6, 0.6);
             }
             else{
-                linearslide = 0.0;
+             tStart = System.currentTimeMillis();
             }
 
-            if(gamepad2.right_stick_y!=0.0){
-             arm = gamepad2.right_stick_y;
+            if (gamepad2.left_trigger != 0.0) {
+                linearPower = gamepad2.left_trigger;
             }
-            else{
-                arm = 0.0;
-            }
-            if(gamepad1.left_trigger>0.0){
-                collector = (0.79*gamepad1.left_trigger);
-            }
-            else if(gamepad1.right_trigger>0.0) {
-                collector = (-0.79 * gamepad1.right_trigger);
-            }
-            else {
-                collector = 0.0;
-            }
-            boolean inTime = (System.currentTimeMillis()-reverseTimer>500);
-            if(gamepad1.a &&inTime){
-                if(forward){
-                    leftDrive.setDirection(DcMotor.Direction.FORWARD);
-                    rightDrive.setDirection(DcMotor.Direction.REVERSE);
-                    forward = false;
-                    reverseTimer = System.currentTimeMillis();
-                    reverseTimer = System.currentTimeMillis();
-                   rev = true;
+            else if (gamepad2.right_trigger != 0.0) {
+                    linearPower = -gamepad2.right_trigger;
                 }
                 else {
-                    leftDrive.setDirection(DcMotor.Direction.REVERSE);
-                    rightDrive.setDirection(DcMotor.Direction.FORWARD);
-                forward = true;
-                    reverseTimer = System.currentTimeMillis();
-                  //  double tempVar = leftPower;
-                    //leftPower = rightPower;
-                    //rightPower = tempVar;
-               rev = true;
-                }
-                reverseTimer = System.currentTimeMillis();
-
-            }
-
-            if(java.lang.Math.abs(leftPower-rightPower)>0.3){
-                if(rev){
-                    rev = false;
-                    double tempVar = leftPower;
-                    leftPower = rightPower;
-                    rightPower = tempVar;
-                }
+                    linearPower = 0.0;
             }
 
 
+            if(gamepad1.left_trigger!= 0.0){
+                collectorPower = gamepad1.left_trigger*-1;
+            }
+
+            if(gamepad1.right_trigger!= 0.0){
+                collectorPower = gamepad1.right_trigger;
+            }
 
 
+            if(gamepad2.left_bumper){
+                liftPower = 1.0;
+            }
+            else if(gamepad2.right_bumper){
+                liftPower = -1.0;
+            }
 
-                telemetry.addLine("pressed between pause");
-                telemetry.update();
-            //}
 
-            armDrive.setPower(arm);
-            linearDrive.setPower(linearslide);
-            collectorDrive.setPower(collector);
-
+            leftDrive.setPower(leftPower);
+            rightDrive.setPower(rightPower);
+            armDrive.setPower(armPower);
+            linearDrive.setPower(linearPower);
+            collectorDrive.setPower(collectorPower);
+            liftDrive.setPower(liftPower);
             telemetry.addData("Status", "Run Time: " + runtime.toString());
-            telemetry.addData("Motors", "left-drive (%.2f), right-drive(%.2f)", leftPower, rightPower);
-            telemetry.addData("linearSlide", linearslide);
-            telemetry.addData("collector", collector);
+            telemetry.addData("Arm Encoder val = ", armDrive.getCurrentPosition());
             telemetry.update();
         }
     }
+    void goUp(double speed) {
+//        armDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        armDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armDrive.setTargetPosition(1900);
+        armDrive.setPower(speed);
+
+        while (armDrive.isBusy()) {
+            telemetry.addData("arm: ", armDrive.getCurrentPosition() );
+            telemetry.update();
+            idle();
+        }
+        armDrive.setPower(0.0);
+    }
+
+
+
+
+
+
+        void goDown(double speed) {
+//        armDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        armDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armDrive.setTargetPosition(0);
+        armDrive.setPower(speed);
+
+        while (armDrive.isBusy()) {
+            telemetry.addData("go down: ", armDrive.getCurrentPosition() );
+            telemetry.update();
+            idle();
+        }
+        armDrive.setPower(0.0);
+    }
+
+
 }
+

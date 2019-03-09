@@ -41,19 +41,14 @@ import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-@TeleOp(name="State Teleop Test", group="Linear Opmode")
-public  class State_TeleOp_Test extends LinearOpMode {
+@TeleOp(name="linearSlideEncoderTest", group="Linear Opmode")
+public  class linearSlideEncoderTest extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotor armDrive = null;
+
     private DcMotor linearDrive = null;
-    private DigitalChannel digitalTouch = null;
-    private CRServo collectorDrive = null;
-    private DcMotor leftDrive = null;
-    private DcMotor rightDrive = null;
-    private CRServo liftDrive = null;
-    long tStart;
+
     static final int COUNTS_PER_MOTOR_REV = 1120;    // eg: TETRIX Motor Encoder
     static final double DRIVE_GEAR_REDUCTION = 25.0;     // This is < 1.0 if geared UP
     static final double WHEEL_DIAMETER_INCHES = 4.0;     // For figuring circumference
@@ -68,12 +63,6 @@ public  class State_TeleOp_Test extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        armDrive = hardwareMap.get(DcMotor.class, "arm_drive");
-        armDrive.setDirection(DcMotor.Direction.REVERSE);
-//        armDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        armDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        armDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        armDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         linearDrive = hardwareMap.get(DcMotor.class, "linear_drive");
         linearDrive.setDirection(DcMotor.Direction.FORWARD);
@@ -81,16 +70,6 @@ public  class State_TeleOp_Test extends LinearOpMode {
         linearDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         linearDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        collectorDrive = hardwareMap.get(CRServo.class, "collector_drive");
-//        digitalTouch = hardwareMap.get(DigitalChannel.class, "limit_switch");
-//        digitalTouch.setMode(DigitalChannel.Mode.INPUT);
-
-        liftDrive = hardwareMap.get(CRServo.class,"lift_drive");
-        liftDrive.setDirection(DcMotorSimple.Direction.FORWARD);
-
-
-        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
-        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
 
         telemetry.addData("Mode", "waiting for start");
         telemetry.update();
@@ -99,7 +78,7 @@ public  class State_TeleOp_Test extends LinearOpMode {
         runtime.reset();
 
         boolean stopArm = false;
-        tStart = 0;
+
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
@@ -118,12 +97,10 @@ public  class State_TeleOp_Test extends LinearOpMode {
             }
 */
             if (gamepad2.a) {
-                goDown(-0.4);
+                goldMineral(0.2);
             }
-            if (gamepad2.y) {
-                goUp(0.4);
 
-            }
+
 
             /*            if (gamepad1.right_bumper) { // go up
                 goStraight(COUNTS_PER_MOTOR_REV, 0.6);
@@ -133,27 +110,7 @@ public  class State_TeleOp_Test extends LinearOpMode {
             }
 */
 
-            if ((gamepad1.left_stick_y != 0.0) || (gamepad1.right_stick_y != 0.0)) {
-                leftPower = Range.clip(-gamepad1.left_stick_y, -0.9, 0.9);
-                rightPower = Range.clip(-gamepad1.right_stick_y, -0.9, 0.9);
-            }
-            else {
-                leftPower = 0.0;
-                rightPower = 0.0;
-            }
 
-
-            if (gamepad2.right_stick_y != 0.0) {
-                armDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                armPower = Range.clip(gamepad2.right_stick_y, -0.7, 0.7);
-            }
-            else if (gamepad2.left_stick_y !=0.0){
-                armDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                armPower = Range.clip(gamepad2.left_stick_y, -0.7, 0.7)/2;
-            }
-            else{
-             tStart = System.currentTimeMillis();
-            }
 
             if (gamepad2.left_trigger != 0.0) {
                 linearPower = gamepad2.left_trigger;
@@ -166,48 +123,12 @@ public  class State_TeleOp_Test extends LinearOpMode {
             }
 
 
-            if(gamepad1.left_trigger!= 0.0){
-                collectorPower = gamepad1.left_trigger*-1;
-            }
-
-            if(gamepad1.right_trigger!= 0.0){
-                collectorPower = gamepad1.right_trigger;
-            }
-
-
-            if(gamepad2.left_bumper){
-                liftPower = 1.0;
-            }
-            else if(gamepad2.right_bumper){
-                liftPower = -1.0;
-            }
-
-
-            leftDrive.setPower(leftPower);
-            rightDrive.setPower(rightPower);
-            armDrive.setPower(armPower);
             linearDrive.setPower(linearPower);
-            collectorDrive.setPower(collectorPower);
-            liftDrive.setPower(liftPower);
+
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.update();
         }
     }
-    void goUp(double speed) {
-//        armDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        armDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        armDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        armDrive.setTargetPosition(0);
-        armDrive.setPower(speed);
-
-        while (armDrive.isBusy()) {
-            telemetry.addData("arm: ", armDrive.getCurrentPosition() );
-            telemetry.update();
-            idle();
-        }
-        armDrive.setPower(0.0);
-    }
-
 
 
         void goldMineral(double speed){
@@ -222,7 +143,7 @@ public  class State_TeleOp_Test extends LinearOpMode {
                 telemetry.update();
                 idle();
             }
-            armDrive.setPower(0.0);
+            linearDrive.setPower(0.0);
         }
 
     void silverMineral(double speed) {
@@ -230,20 +151,7 @@ public  class State_TeleOp_Test extends LinearOpMode {
 
 
     }
-        void goDown(double speed) {
-//        armDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        armDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        armDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        armDrive.setTargetPosition(-2400);
-        armDrive.setPower(speed);
 
-        while (armDrive.isBusy()) {
-            telemetry.addData("go down: ", armDrive.getCurrentPosition() );
-            telemetry.update();
-            idle();
-        }
-        armDrive.setPower(0.0);
-    }
 
 
 }

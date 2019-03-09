@@ -34,7 +34,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
@@ -47,17 +46,18 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.Came
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 
-import java.security.AllPermission;
 import java.util.List;
 
-@Autonomous(name="SQT Autonomous Consolidated", group="Linear Opmode")
-public class SQT_Autonomous_Consolidated extends LinearOpMode {
+@Autonomous(name="State Autonomous Consolidated2", group="Linear Opmode")
+public class State_Autonomous_Consolidated2 extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
-    private DcMotor liftDrive = null;
+    private CRServo liftDrive = null;
     private CRServo collectorDrive = null;
+    private DcMotor linearDrive = null;
+    private DcMotor armDrive = null;
 
     private static final String TFOD_MODEL_ASSET = "RoverRuckus.tflite";
     private static final String LABEL_GOLD_MINERAL = "Gold Mineral";
@@ -82,11 +82,13 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
     final int GOTO_DEPOT_ONE = 7;
     final int GOTO_DEPOT_TWO = 8;
     final int GO_STRAIGHT_GOLD_TWO = 9;
-    final int CLAIM = 10;
-    final int RETRACT_LIFT_AND_BACK_OUT = 11;
+    final int CLAIM_0 = 10;
+    final int CLAIM_1 = 11;
+    final int RETRACT_LIFT_AND_BACK_OUT = 12;
     final int ALLTASKSCOMPLETED = 100;
+    final int TEST_MODE = 101;
 
-    int RETRACT_LIFT_TIME = 6000;
+    int RETRACT_LIFT_TIME = 3000;
     final int CUTOFF_POINT = 600;
 
     final int DEPOT_SIDE = 1;
@@ -96,7 +98,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
     long tStart;
     int currentTask;
 
-    static final double COUNTS_PER_MOTOR_REV = 1120;    // eg: TETRIX Motor Encoder
+    static final double COUNTS_PER_MOTOR_REV = 1120;
     static final double DRIVE_GEAR_REDUCTION = 1.5;     // This is < 1.0 if geared UP
     static final double WHEEL_DIAMETER_INCHES = 4.0;     // For figuring circumference
     static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / (WHEEL_DIAMETER_INCHES * 3.1415);
@@ -123,15 +125,20 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
 
         leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
-        liftDrive = hardwareMap.get(DcMotor.class, "lift_drive");
+        liftDrive = hardwareMap.get(CRServo.class, "lift_drive");
         leftDrive.setDirection(DcMotor.Direction.REVERSE);
         leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightDrive.setDirection(DcMotor.Direction.FORWARD);
         rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        liftDrive.setDirection(DcMotor.Direction.FORWARD);
+        liftDrive.setDirection(DcMotor.Direction.REVERSE);
         leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         collectorDrive = hardwareMap.get(CRServo.class, "collector_drive");
+        linearDrive = hardwareMap.get(DcMotor.class, "linear_drive");
+        armDrive = hardwareMap.get(DcMotor.class, "arm_drive");
+        armDrive.setDirection(DcMotor.Direction.REVERSE);
+
+
 
         telemetry.addData("Calibrating ", "IMU");
         telemetry.update();
@@ -203,7 +210,8 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
-        currentTask = SAMPLE_RECOGNITION;
+        currentTask = CLAIM_0;
+//        currentTask = TEST_MODE;
         tStart = System.currentTimeMillis();
 
         // run until the end of the match (driver presses STOP)
@@ -215,6 +223,23 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
             // the following code goes from one mission to another. The currentTask
             // variable decides what mission to perform in the next loop iteration
             switch (currentTask) {
+
+                case TEST_MODE:
+                    goStraight(-12, -1.0);
+
+/*                    if (System.currentTimeMillis() - tStart < 2000) {
+                        leftDrive.setPower(0.5);
+                        rightDrive.setPower(0.5);
+                    }
+                    else {
+                        leftDrive.setPower(0.0);
+                        rightDrive.setPower(0.0);
+                        currentTask = ALLTASKSCOMPLETED;
+
+                    }
+*/
+                    currentTask = ALLTASKSCOMPLETED;
+                    break;
 
                 case SAMPLE_RECOGNITION:
                     telemetry.addLine("currentTask: SAMPLE_RECOGNITION");
@@ -273,7 +298,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                 case GOLD_CASE_ZERO:
                     telemetry.addLine("currentTask: GOLD_CASE_ZERO");
                     telemetry.update();
-                    goStraight(-35, 1.0);
+                    goStraight(-35, -1.0);
                     if(startSide == CRATER_SIDE)
                         currentTask = ALLTASKSCOMPLETED;
                     else {
@@ -295,7 +320,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                     telemetry.addLine("currentTask: GOLD_CASE_TWO");
                     telemetry.update();
                     rotate(-60, 0.5);
-                    goStraight(-35, 1.0);
+                    goStraight(-35, -1.0);
                     if(startSide == CRATER_SIDE)
                         currentTask = ALLTASKSCOMPLETED;
                     else {
@@ -307,18 +332,20 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                 case GOTO_DEPOT_ZERO:
                     telemetry.addLine("currentTask: GOTO_DEPOT_ZERO");
                     telemetry.update();
-                    goStraight(-30,1.0);
+                    goStraight(-30,-1.0);
+                    goStraight(15,1.0);
                     tStart = System.currentTimeMillis();
-                    currentTask = CLAIM;
+                    currentTask = CLAIM_0;
                     break;
 
                 case GOTO_DEPOT_ONE:
                     telemetry.addLine("currentTask: GOTO_DEPOT_ONE");
                     telemetry.update();
                     if(startSide == DEPOT_SIDE){
-                        goStraight(-45,1.0);
+                        goStraight(-45,-1.0);
+                        goStraight(15,1.0);
                         tStart = System.currentTimeMillis();
-                        currentTask = CLAIM;
+                        currentTask = CLAIM_0;
                     }
                     else{
                         goStraight(-30,1.0);
@@ -328,37 +355,49 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
 
                 case GOTO_DEPOT_TWO:
 
-                    if (System.currentTimeMillis() - tStart < 1800) {
+/*                    if (System.currentTimeMillis() - tStart < 1800) {
                         leftDrive.setPower(-0.5);
                         rightDrive.setPower(-0.5);
                     } else {
                         leftDrive.setPower(0.0);
                         rightDrive.setPower(0.0);
+                        goStraight(15,1.0);
                         tStart = System.currentTimeMillis();
-                        currentTask = CLAIM;
+                        currentTask = CLAIM_0;
                     }
+ */
                     telemetry.addLine("currentTask: GOTO_DEPOT_TWO");
                     telemetry.update();
+                    goStraight(-30,-1.0);
+                    goStraight(15,1.0);
+                    currentTask = CLAIM_0;
                     tStart = System.currentTimeMillis();
-                    goStraight(-30,1.0);
-                    currentTask = CLAIM;
                     break;
 
-                case CLAIM:
+                case CLAIM_0:
                     telemetry.addLine("currentTask: CLAIM");
                     telemetry.update();
-                    if (System.currentTimeMillis() - tStart < 2000) {
-                        collectorDrive.setPower(0.7);
-                        if (System.currentTimeMillis() - tStart < 1500) {
+                    if(System.currentTimeMillis()-tStart<2000){
+                        liftDrive.setPower(-1.0);
+                        linearDrive.setPower(0.5);
+                    }
+                    else {
+                        linearDrive.setPower(0.0);
+                        liftDrive.setPower(0.0);
+                        goDown(0.5);
+                        tStart = System.currentTimeMillis();
+                        currentTask = CLAIM_1;
+                    }
+                    break;
+
+                case CLAIM_1:
+                        if (System.currentTimeMillis() - tStart < 1000) {
                             leftDrive.setPower(1.0);
                             rightDrive.setPower(1.0);
                         }
-                    } else {
-                        collectorDrive.setPower(0.0);
-                        leftDrive.setPower(0.0);
-                        rightDrive.setPower(0.0);
-                        currentTask = RETRACT_LIFT_AND_BACK_OUT;
+                    else{
                         tStart = System.currentTimeMillis();
+                        currentTask = RETRACT_LIFT_AND_BACK_OUT;
                     }
                     break;
 
@@ -377,7 +416,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
                         case 2:
                             goStraight(6,1.0);
                             rotate(70, 1.0);
-                            goStraight(-24, 1.0);
+                            goStraight(-24, -1.0);
 //                            rotate(-60, 0.5);
                             currentTask = ALLTASKSCOMPLETED;
                             break;
@@ -609,25 +648,48 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
     }
 
     void goStraight(int distanceInInches, double speed) {
+
+
         leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
+//        leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+//        rightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+//        leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
         leftDrive.setTargetPosition(distanceInInches * (int)COUNTS_PER_INCH);
         rightDrive.setTargetPosition(distanceInInches * (int)COUNTS_PER_INCH);
-
         leftDrive.setPower(speed);
         rightDrive.setPower(speed);
 
-        while (leftDrive.isBusy() && rightDrive.isBusy()) {
+        while (rightDrive.isBusy()) {
             telemetry.addData("left enc", leftDrive.getCurrentPosition() + "  busy=" + leftDrive.isBusy());
             telemetry.addData("right enc", rightDrive.getCurrentPosition() + "  busy=" + rightDrive.isBusy());
             telemetry.update();
             idle();
         }
+
         leftDrive.setPower(0.0);
         rightDrive.setPower(0.0);
+    }
+
+
+    void goDown(double speed) {
+        armDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        armDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armDrive.setTargetPosition(-2400);
+        armDrive.setPower(speed);
+
+        while (armDrive.isBusy()) {
+            telemetry.addData("go down: ", armDrive.getCurrentPosition() );
+            telemetry.update();
+            idle();
+        }
+        armDrive.setPower(0.0);
     }
 }
