@@ -71,6 +71,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
      */
 
     @TeleOp(name="QT Teleop", group="Linear Opmode")
+    @Disabled
     public  class QT_TeleOp extends LinearOpMode {
 
         // Declare OpMode members.

@@ -84,7 +84,9 @@ public class State_Autonomous_Consolidated2 extends LinearOpMode {
     final int GO_STRAIGHT_GOLD_TWO = 9;
     final int CLAIM_0 = 10;
     final int CLAIM_1 = 11;
-    final int RETRACT_LIFT_AND_BACK_OUT = 12;
+    final int BACKUP2 = 12;
+    final int RETRACT_LIFT_AND_BACK_OUT = 13;
+    final int RETRACT_LIFT = 14;
     final int ALLTASKSCOMPLETED = 100;
     final int TEST_MODE = 101;
 
@@ -210,7 +212,7 @@ public class State_Autonomous_Consolidated2 extends LinearOpMode {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
-        currentTask = CLAIM_0;
+        currentTask = SAMPLE_RECOGNITION;
 //        currentTask = TEST_MODE;
         tStart = System.currentTimeMillis();
 
@@ -319,12 +321,12 @@ public class State_Autonomous_Consolidated2 extends LinearOpMode {
                 case GOLD_CASE_TWO:
                     telemetry.addLine("currentTask: GOLD_CASE_TWO");
                     telemetry.update();
-                    rotate(-60, 0.5);
+                    rotate(-65, 0.5);
                     goStraight(-35, -1.0);
                     if(startSide == CRATER_SIDE)
                         currentTask = ALLTASKSCOMPLETED;
                     else {
-                        rotate(60, 0.5);
+                        rotate(65, 0.5);
                         currentTask = GOTO_DEPOT_TWO;
                     }
                     break;
@@ -397,7 +399,25 @@ public class State_Autonomous_Consolidated2 extends LinearOpMode {
                         }
                     else{
                         tStart = System.currentTimeMillis();
-                        currentTask = RETRACT_LIFT_AND_BACK_OUT;
+                        currentTask = BACKUP2;
+                    }
+                    break;
+
+                case BACKUP2:
+                        goStraight(10, 0.4);
+                        tStart = System.currentTimeMillis();
+                        currentTask = ALLTASKSCOMPLETED;
+                        break;
+
+                case RETRACT_LIFT:
+                    telemetry.addLine("currentTask: RETRACT_LIFT");
+                    telemetry.update();
+                    if (System.currentTimeMillis()-tStart<RETRACT_LIFT_TIME) {
+                        liftDrive.setPower(-1.0);
+                    }
+                    else {
+                        liftDrive.setPower(0.0);
+                        currentTask = ALLTASKSCOMPLETED;
                     }
                     break;
 

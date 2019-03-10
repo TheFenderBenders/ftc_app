@@ -45,6 +45,7 @@ import com.qualcomm.robotcore.util.Range;
 
 
     @TeleOp(name="LM3 Teleop DONOTDELETE", group="Linear Opmode")
+    @Disabled
     public class TestTeleOp extends LinearOpMode {
 
         // Declare OpMode members.

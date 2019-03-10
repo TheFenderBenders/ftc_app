@@ -32,6 +32,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -65,6 +66,7 @@ import com.qualcomm.robotcore.util.Range;
  */
 
 @TeleOp(name="New Arm teleop", group="Linear Opmode")
+@Disabled
 public  class New_Arm_teleop extends LinearOpMode {
 
     // Declare OpMode members.

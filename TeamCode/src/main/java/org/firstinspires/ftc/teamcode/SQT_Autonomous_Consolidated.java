@@ -248,6 +248,7 @@ public class SQT_Autonomous_Consolidated extends LinearOpMode {
 
                 case BACKUP:
                     telemetry.addLine("currentTask: BACKUP");
+
                     telemetry.update();
                     if (System.currentTimeMillis() - tStart < 250) {
                         leftDrive.setPower(-0.5);

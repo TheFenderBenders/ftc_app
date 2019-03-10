@@ -51,7 +51,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  */
 
 @TeleOp(name="SPARK TEST Tele Op", group="Linear Opmode")
-
+@Disabled
 public class SPARK_TEST_TeleOp extends LinearOpMode {
 
     // Declare OpMode members.

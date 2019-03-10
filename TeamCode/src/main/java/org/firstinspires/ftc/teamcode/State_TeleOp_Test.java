@@ -59,6 +59,8 @@ public  class State_TeleOp_Test extends LinearOpMode {
     static final double WHEEL_DIAMETER_INCHES = 4.0;     // For figuring circumference
     static final double COUNTS_PER_INCH = COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION ;
     boolean firstUse = true;
+    boolean goingUp = false;
+    boolean goingDown = false;
 
     @Override
     public void runOpMode() {
@@ -127,7 +129,6 @@ public  class State_TeleOp_Test extends LinearOpMode {
             }
             if (gamepad2.y) {
                 goUp(0.4);
-
             }
 
 
@@ -148,7 +149,6 @@ public  class State_TeleOp_Test extends LinearOpMode {
                 rightPower = 0.0;
             }
 
-
             if (gamepad2.right_stick_y != 0.0) {
                 armDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                 armPower = Range.clip(gamepad2.right_stick_y, -0.7, 0.7);
@@ -161,6 +161,8 @@ public  class State_TeleOp_Test extends LinearOpMode {
              tStart = System.currentTimeMillis();
             }
 
+
+
             if (gamepad2.left_trigger != 0.0) {
                 linearPower = gamepad2.left_trigger;
             }
@@ -171,15 +173,15 @@ public  class State_TeleOp_Test extends LinearOpMode {
                     linearPower = 0.0;
             }
 
-
             if(gamepad1.left_trigger!= 0.0){
                 collectorPower = gamepad1.left_trigger*-1;
             }
-
-            if(gamepad1.right_trigger!= 0.0){
+            else if(gamepad1.right_trigger!= 0.0){
                 collectorPower = gamepad1.right_trigger;
             }
-
+            else {
+                collectorPower = 0.0;
+            }
 
             if(gamepad2.left_bumper){
                 liftPower = 1.0;
@@ -187,7 +189,6 @@ public  class State_TeleOp_Test extends LinearOpMode {
             else if(gamepad2.right_bumper){
                 liftPower = -1.0;
             }
-
 
             leftDrive.setPower(leftPower);
             rightDrive.setPower(rightPower);
@@ -215,13 +216,9 @@ public  class State_TeleOp_Test extends LinearOpMode {
         armDrive.setPower(0.0);
     }
 
-
-
-
-
-
         void goDown(double speed) {
 //        armDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         armDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         armDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         armDrive.setTargetPosition(0);
